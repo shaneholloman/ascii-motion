@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogIn, Crown, LogOut, Settings } from 'lucide-react';
+import { LogIn, Crown, LogOut, Settings, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,7 +15,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAuth, SignUpDialog, SignInDialog, PasswordResetDialog, AccountSettingsDialog } from '@ascii-motion/premium';
+import { useAuth, SignUpDialog, SignInDialog, PasswordResetDialog, AccountSettingsDialog, ProfileSettingsDialog } from '@ascii-motion/premium';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -25,6 +25,7 @@ export function AccountButton() {
   const [showSignIn, setShowSignIn] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
+  const [showProfileSettings, setShowProfileSettings] = useState(false);
 
   // Listen for custom event to open signup dialog
   useEffect(() => {
@@ -141,6 +142,10 @@ export function AccountButton() {
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => setShowProfileSettings(true)}>
+            <User className="mr-2 h-4 w-4" />
+            <span>Profile Settings</span>
+          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => setShowAccountSettings(true)}>
             <Settings className="mr-2 h-4 w-4" />
             <span>Account Settings</span>
@@ -162,6 +167,15 @@ export function AccountButton() {
         }}
         onAccountDeleted={() => {
           toast.success('Account deleted successfully');
+        }}
+      />
+
+      {/* Profile Settings Dialog */}
+      <ProfileSettingsDialog
+        open={showProfileSettings}
+        onOpenChange={setShowProfileSettings}
+        onSaved={() => {
+          toast.success('Profile updated successfully');
         }}
       />
     </TooltipProvider>
