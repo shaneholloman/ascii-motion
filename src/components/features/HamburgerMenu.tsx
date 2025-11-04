@@ -106,14 +106,14 @@ export const HamburgerMenu: React.FC<HamburgerMenuProps> = ({ onOpenGallery, onO
             
             <MenubarSeparator />
             
-            {FEATURES.COMMUNITY_SHOWCASE && user && onOpenGallery && (
+            {FEATURES.COMMUNITY_SHOWCASE && onOpenGallery && (
               <>
                 <MenubarItem onClick={onOpenGallery} className="cursor-pointer">
                   <Users className="mr-2 h-4 w-4" />
                   <span>Community Gallery</span>
                 </MenubarItem>
                 
-                {onOpenPublish && (
+                {user && onOpenPublish && (
                   <MenubarItem onClick={onOpenPublish} className="cursor-pointer">
                     <Upload className="mr-2 h-4 w-4" />
                     <span>Publish to Gallery</span>

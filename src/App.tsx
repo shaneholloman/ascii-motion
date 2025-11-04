@@ -1,6 +1,6 @@
 import './App.css'
 import { useState, useEffect, useCallback } from 'react'
-import { BrowserRouter, Routes, Route, useNavigate } from 'react-router-dom'
+import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { CanvasProvider, useCanvasContext } from './contexts/CanvasContext'
 import { ThemeProvider } from './contexts/ThemeContext'
@@ -104,7 +104,11 @@ function AppContent() {
 
   // Navigation
   const navigate = useNavigate()
+  const location = useLocation()
   const [showPublishDialog, setShowPublishDialog] = useState(false)
+
+  // Check if we're on community routes
+  const isCommunityRoute = location.pathname.startsWith('/community')
 
   // Update dialog visibility when recovery state changes
   useEffect(() => {
@@ -121,16 +125,20 @@ function AppContent() {
   return (
     <div className="h-screen grid grid-rows-[auto_1fr] bg-background text-foreground">
         {/* Header - compact */}
-        <header className="flex-shrink-0 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+        <header className="flex-shrink-0 border-b border-border/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
           <div className="px-4 py-2">
             <div className="flex justify-between items-center">
               <div className="flex gap-3 relative items-center">
-                <HamburgerMenu 
-                  onOpenGallery={() => navigate('/community')}
-                  onOpenPublish={() => setShowPublishDialog(true)}
-                />
+                {/* Show hamburger menu only on editor routes */}
+                {!isCommunityRoute && (
+                  <HamburgerMenu 
+                    onOpenGallery={() => navigate('/community')}
+                    onOpenPublish={() => setShowPublishDialog(true)}
+                  />
+                )}
                 <div
-                  className="ascii-logo ascii-logo-selectable font-mono tracking-tighter whitespace-pre"
+                  onClick={() => navigate('/')}
+                  className="ascii-logo ascii-logo-selectable font-mono tracking-tighter whitespace-pre hover:opacity-80 transition-opacity cursor-pointer"
                   aria-label="ASCII Motion logo"
                 >
                   <span className="text-purple-500">----▗▄▖  ▗▄▄▖ ▗▄▄▖▗▄▄▄▖▗▄▄▄▖    ▗▖  ▗▖ ▗▄▖▗▄▄▄▖▗▄▄▄▖ ▗▄▖ ▗▖  ▗▖</span>
@@ -139,11 +147,16 @@ function AppContent() {
                   <span className="text-purple-300">  -▐▌ ▐▌▗▄▄▞▘▝▚▄▄▖▗▄█▄▖▗▄█▄▖    ▐▌  ▐▌▝▚▄▞▘ █  ▗▄█▄▖▝▚▄▞▘▐▌  ▐▌</span>
                 </div>
               </div>
-              <div className="flex-1 flex justify-center">
-                <InlineProjectNameEditor />
-              </div>
+              {/* Show project editor only on editor routes */}
+              {!isCommunityRoute && (
+                <div className="flex-1 flex justify-center">
+                  <InlineProjectNameEditor />
+                </div>
+              )}
+              {isCommunityRoute && <div className="flex-1" />}
               <div className="flex items-center gap-2">
-                <ExportImportButtons />
+                {/* Show export/import only on editor routes */}
+                {!isCommunityRoute && <ExportImportButtons />}
                 <ThemeToggle />
                 <AccountButton />
               </div>
