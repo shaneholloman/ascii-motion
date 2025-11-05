@@ -3,7 +3,7 @@
  * Provides session data from CanvasContext to the dialog
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { PublishToGalleryDialog } from '@ascii-motion/premium';
 import { useExportDataCollector } from '../../utils/exportDataCollector';
 import { useProjectMetadataStore } from '../../stores/projectMetadataStore';
@@ -86,13 +86,33 @@ export function PublishToGalleryDialogWrapper({
   const [isSaving, setIsSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [isReady, setIsReady] = useState(false);
+  
+  // Use ref to track if save has been initiated (persists across re-renders)
+  const saveInitiatedRef = useRef(false);
+
+  // Reset state when dialog closes
+  useEffect(() => {
+    if (!isOpen) {
+      setIsReady(false);
+      setIsSaving(false);
+      setSaveError(null);
+      saveInitiatedRef.current = false;
+    }
+  }, [isOpen]);
 
   // Auto-save before showing publish dialog
   useEffect(() => {
     if (!isOpen || !exportData || !currentProjectId) {
-      setIsReady(false);
       return;
     }
+
+    // Check ref - if save already initiated, don't run again
+    if (saveInitiatedRef.current) {
+      return;
+    }
+
+    // Mark save as initiated immediately to prevent re-runs
+    saveInitiatedRef.current = true;
 
     let cancelled = false;
 
@@ -113,6 +133,7 @@ export function PublishToGalleryDialogWrapper({
         if (!cancelled) {
           setSaveError(err instanceof Error ? err.message : 'Failed to save project');
           setIsSaving(false);
+          saveInitiatedRef.current = false; // Reset on error so user can retry
         }
       }
     };
@@ -122,7 +143,9 @@ export function PublishToGalleryDialogWrapper({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, exportData, currentProjectId, handleSaveToCloud]);
+    // Only depend on isOpen - other dependencies will cause infinite loop
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   // Don't render dialog if not open
   if (!isOpen) {
