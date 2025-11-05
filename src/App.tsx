@@ -17,6 +17,7 @@ import { SaveToCloudDialog } from './components/features/SaveToCloudDialog'
 import { ProjectsDialog } from './components/features/ProjectsDialog'
 import { SilentSaveHandler } from './components/features/SilentSaveHandler'
 import { Toaster } from './components/ui/sonner'
+import { toast } from 'sonner'
 import { MobileDialog } from './components/features/MobileDialog'
 import { BrushSizePreviewOverlay } from './components/features/BrushSizePreviewOverlay'
 import { PublishToGalleryDialogWrapper } from './components/features/PublishToGalleryDialogWrapper'
@@ -204,6 +205,18 @@ function AppContent() {
                 onPublishSuccess={(projectId) => {
                   console.log('Published project:', projectId)
                   setShowPublishDialog(false)
+                  
+                  // Show success toast with link to gallery
+                  toast.success('Published to community gallery', {
+                    description: 'Your project is now live!',
+                    action: {
+                      label: 'Go to gallery',
+                      onClick: () => {
+                        window.location.href = '/community'
+                      }
+                    },
+                    duration: 5000,
+                  })
                 }}
               />
             </>
