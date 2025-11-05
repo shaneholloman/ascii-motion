@@ -1,5 +1,5 @@
 import './App.css'
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import { CanvasProvider, useCanvasContext } from './contexts/CanvasContext'
@@ -60,8 +60,16 @@ function AppContent() {
     [loadFromCloudBase, setFontSize, setCharacterSpacing, setLineSpacing, setSelectedFontId]
   );
 
+  // Track if we've already processed URL parameters (prevents infinite loop)
+  const processedUrlRef = useRef(false);
+
   // Handle URL parameters for remix flow
   useEffect(() => {
+    // Skip if already processed
+    if (processedUrlRef.current) {
+      return;
+    }
+
     const params = new URLSearchParams(window.location.search)
     const projectId = params.get('project')
     const isRemix = params.get('remix') === 'true'
@@ -69,8 +77,9 @@ function AppContent() {
 
     // Open "My Projects" dialog if requested
     if (manageProjects && user) {
+      processedUrlRef.current = true;
       setShowProjectsDialog(true)
-      // Clean up URL
+      // Clean up URL immediately
       const newUrl = window.location.pathname
       window.history.replaceState({}, '', newUrl)
       return
@@ -78,6 +87,11 @@ function AppContent() {
 
     // Auto-load project if specified
     if (projectId && user && isRemix) {
+      processedUrlRef.current = true;
+      // Clean up URL IMMEDIATELY to prevent re-triggers
+      const newUrl = window.location.pathname
+      window.history.replaceState({}, '', newUrl)
+      
       // Fetch project data then load it
       const loadRemixedProject = async () => {
         try {
@@ -87,10 +101,6 @@ function AppContent() {
           }
         } catch (error) {
           console.error('Failed to load remixed project:', error)
-        } finally {
-          // Clean up URL
-          const newUrl = window.location.pathname
-          window.history.replaceState({}, '', newUrl)
         }
       }
       

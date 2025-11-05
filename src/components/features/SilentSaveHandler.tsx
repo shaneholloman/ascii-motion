@@ -8,7 +8,7 @@
  * @premium This component requires authentication and uses premium cloud storage features
  */
 
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { CloudUpload } from 'lucide-react';
 import { useCloudDialogState } from '../../hooks/useCloudDialogState';
@@ -16,13 +16,17 @@ import { useCloudProjectActions } from '../../hooks/useCloudProjectActions';
 import { useProjectMetadataStore } from '../../stores/projectMetadataStore';
 import { useExportDataCollector } from '../../utils/exportDataCollector';
 import { useAuth } from '@ascii-motion/premium';
+import { PublishedProjectSaveWarningDialog } from './PublishedProjectSaveWarningDialog';
 
 export function SilentSaveHandler() {
   const { user } = useAuth();
   const { triggerSilentSave, setTriggerSilentSave } = useCloudDialogState();
-  const { handleSaveToCloud } = useCloudProjectActions();
+  const { handleSaveToCloud, checkIfPublished } = useCloudProjectActions();
   const { projectName, projectDescription, currentProjectId } = useProjectMetadataStore();
   const exportData = useExportDataCollector();
+
+  const [showPublishWarning, setShowPublishWarning] = useState(false);
+  const [pendingSaveData, setPendingSaveData] = useState<typeof exportData | null>(null);
 
   useEffect(() => {
     if (!triggerSilentSave || !user || !currentProjectId) {
@@ -34,6 +38,17 @@ export function SilentSaveHandler() {
 
     const performSilentSave = async () => {
       try {
+        // Check if project is published
+        const isPublished = await checkIfPublished(currentProjectId);
+        
+        if (isPublished) {
+          // Show warning dialog
+          setPendingSaveData(exportData);
+          setShowPublishWarning(true);
+          return;
+        }
+
+        // Not published, save directly
         await handleSaveToCloud(
           exportData,
           projectName,
@@ -57,8 +72,46 @@ export function SilentSaveHandler() {
     };
 
     performSilentSave();
-  }, [triggerSilentSave, user, currentProjectId, handleSaveToCloud, exportData, projectName, projectDescription, setTriggerSilentSave]);
+  }, [triggerSilentSave, user, currentProjectId, handleSaveToCloud, checkIfPublished, exportData, projectName, projectDescription, setTriggerSilentSave]);
 
-  // This component doesn't render anything - it just handles the side effect
-  return null;
+  const handleConfirmSave = async () => {
+    setShowPublishWarning(false);
+    
+    if (!pendingSaveData) return;
+
+    try {
+      await handleSaveToCloud(
+        pendingSaveData,
+        projectName,
+        projectDescription,
+        false
+      );
+      
+      toast.success('Saved & updated gallery', {
+        description: projectName,
+        icon: <CloudUpload className="h-5 w-5 text-purple-500" />,
+      });
+    } catch (error) {
+      console.error('[SilentSaveHandler] Failed to save project:', error);
+      toast.error('Failed to save project', {
+        description: error instanceof Error ? error.message : 'An unexpected error occurred',
+      });
+    } finally {
+      setPendingSaveData(null);
+    }
+  };
+
+  const handleCancelSave = () => {
+    setShowPublishWarning(false);
+    setPendingSaveData(null);
+  };
+
+  return (
+    <PublishedProjectSaveWarningDialog
+      isOpen={showPublishWarning}
+      onOpenChange={setShowPublishWarning}
+      onConfirm={handleConfirmSave}
+      onCancel={handleCancelSave}
+    />
+  );
 }

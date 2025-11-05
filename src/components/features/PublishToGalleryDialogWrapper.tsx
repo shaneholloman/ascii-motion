@@ -3,12 +3,14 @@
  * Provides session data from CanvasContext to the dialog
  */
 
+import { useState, useEffect } from 'react';
 import { PublishToGalleryDialog } from '@ascii-motion/premium';
 import { useExportDataCollector } from '../../utils/exportDataCollector';
 import { useProjectMetadataStore } from '../../stores/projectMetadataStore';
+import { useCloudProjectActions } from '../../hooks/useCloudProjectActions';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { AlertCircle, Loader2 } from 'lucide-react';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import type { SessionData } from '@ascii-motion/premium';
 import type { ExportDataBundle } from '../../types/export';
 
@@ -79,6 +81,48 @@ export function PublishToGalleryDialogWrapper({
 }: PublishToGalleryDialogWrapperProps) {
   const exportData = useExportDataCollector();
   const { currentProjectId } = useProjectMetadataStore();
+  const { handleSaveToCloud } = useCloudProjectActions();
+  
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
+  const [isReady, setIsReady] = useState(false);
+
+  // Auto-save before showing publish dialog
+  useEffect(() => {
+    if (!isOpen || !exportData || !currentProjectId) {
+      setIsReady(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    const autoSave = async () => {
+      setIsSaving(true);
+      setSaveError(null);
+      
+      try {
+        console.log('[PublishWrapper] Auto-saving project before publish...');
+        await handleSaveToCloud(exportData, exportData.name, exportData.description);
+        
+        if (!cancelled) {
+          setIsReady(true);
+          setIsSaving(false);
+        }
+      } catch (err) {
+        console.error('[PublishWrapper] Auto-save failed:', err);
+        if (!cancelled) {
+          setSaveError(err instanceof Error ? err.message : 'Failed to save project');
+          setIsSaving(false);
+        }
+      }
+    };
+
+    autoSave();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [isOpen, exportData, currentProjectId, handleSaveToCloud]);
 
   // Don't render dialog if not open
   if (!isOpen) {
@@ -89,6 +133,44 @@ export function PublishToGalleryDialogWrapper({
   if (!exportData) {
     console.warn('[PublishToGalleryDialogWrapper] No export data available');
     return null;
+  }
+
+  // Show saving state
+  if (isSaving) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Preparing to Publish</DialogTitle>
+            <DialogDescription>
+              Saving your latest changes...
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </DialogContent>
+      </Dialog>
+    );
+  }
+
+  // Show save error
+  if (saveError) {
+    return (
+      <Dialog open={isOpen} onOpenChange={onOpenChange}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Failed</DialogTitle>
+          </DialogHeader>
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              {saveError}
+            </AlertDescription>
+          </Alert>
+        </DialogContent>
+      </Dialog>
+    );
   }
 
   // Check if project is saved to cloud
@@ -109,6 +191,11 @@ export function PublishToGalleryDialogWrapper({
         </DialogContent>
       </Dialog>
     );
+  }
+
+  // Don't show publish dialog until auto-save completes
+  if (!isReady) {
+    return null;
   }
 
   // Convert ExportDataBundle to SessionData

@@ -15,7 +15,8 @@
  */
 
 import { useCallback, useState } from 'react';
-import { useCloudProject } from '@ascii-motion/premium';
+import { useCloudProject, supabase } from '@ascii-motion/premium';
+import { generatePreviewAndThumbnail, uploadProjectImages } from '@ascii-motion/premium';
 import type { SessionData } from '@ascii-motion/premium';
 import type { ExportDataBundle } from '../types/export';
 import { saveAs } from 'file-saver';
@@ -84,6 +85,32 @@ export function useCloudProjectActions() {
   }, []);
 
   /**
+   * Check if a project is currently published
+   */
+  const checkIfPublished = useCallback(
+    async (projectId: string): Promise<boolean> => {
+      try {
+        const { data, error } = await supabase
+          .from('projects')
+          .select('is_published')
+          .eq('id', projectId)
+          .single();
+
+        if (error) {
+          console.error('[CloudActions] Error checking publish status:', error);
+          return false;
+        }
+
+        return (data as { is_published: boolean } | null)?.is_published || false;
+      } catch (err) {
+        console.error('[CloudActions] Failed to check publish status:', err);
+        return false;
+      }
+    },
+    []
+  );
+
+  /**
    * Save current project to cloud
    */
   const handleSaveToCloud = useCallback(
@@ -91,6 +118,9 @@ export function useCloudProjectActions() {
       try {
         // Create session data from current state
         const sessionData = createSessionData(exportData);
+
+        // Check if updating an existing published project
+        const isUpdatingPublished = !forceNew && currentProjectId && await checkIfPublished(currentProjectId);
 
         // Save to cloud
         // If forceNew is true, don't pass projectId to create a new project
@@ -102,6 +132,60 @@ export function useCloudProjectActions() {
 
         if (project) {
           setCurrentProjectId(project.id);
+
+          // If we're updating a published project, regenerate preview images
+          if (isUpdatingPublished) {
+            console.log('[CloudActions] Regenerating preview images for published project');
+            try {
+              // Get current frame
+              const frameIndex = exportData.currentFrameIndex || 0;
+              const frame = sessionData.animation.frames[frameIndex];
+              
+              if (!frame) {
+                throw new Error('Selected frame not found');
+              }
+
+              // Generate new preview and thumbnail
+              const { preview, thumbnail } = await generatePreviewAndThumbnail(
+                [frame],
+                {
+                  width: sessionData.canvas.width,
+                  height: sessionData.canvas.height,
+                  backgroundColor: sessionData.canvas.canvasBackgroundColor,
+                  fontSize: sessionData.typography?.fontSize || 16,
+                  fontFamily: sessionData.typography?.selectedFontId || 'monospace'
+                },
+                { size: 200 } // Thumbnail size
+              );
+
+              // Upload new images
+              const imageResult = await uploadProjectImages(
+                project.id,
+                preview.blob,
+                thumbnail.blob
+              );
+
+              // Add cache-busting timestamp to URLs to force browser/CDN refresh
+              const timestamp = Date.now();
+              const previewUrlWithCache = `${imageResult.preview.url}?v=${timestamp}`;
+              const thumbnailUrlWithCache = `${imageResult.thumbnail.url}?v=${timestamp}`;
+
+              // Update project with new image URLs (with cache busting)
+              await supabase
+                .from('projects')
+                .update({
+                  preview_image_url: previewUrlWithCache,
+                  thumbnail_url: thumbnailUrlWithCache,
+                } as never) // Type assertion to bypass Supabase type inference
+                .eq('id', project.id);
+
+              console.log('[CloudActions] Preview images regenerated successfully with cache-busting timestamp');
+            } catch (previewError) {
+              console.error('[CloudActions] Failed to regenerate preview images:', previewError);
+              // Don't fail the whole save if preview regeneration fails
+            }
+          }
+
           return project;
         } else {
           console.error('[CloudActions] Save returned null');
@@ -111,7 +195,7 @@ export function useCloudProjectActions() {
       }
       return null;
     },
-    [saveToCloud, currentProjectId, createSessionData, setCurrentProjectId]
+    [saveToCloud, currentProjectId, createSessionData, setCurrentProjectId, checkIfPublished]
   );
 
   /**
@@ -219,5 +303,6 @@ export function useCloudProjectActions() {
     handleDownloadProject,
     openProjectsDialog,
     clearCurrentProject,
+    checkIfPublished,
   };
 }
