@@ -16,7 +16,7 @@
 
 import { useCallback, useState } from 'react';
 import { useCloudProject, supabase } from '@ascii-motion/premium';
-import { generatePreviewAndThumbnail, uploadProjectImages } from '@ascii-motion/premium';
+import { generatePreview, uploadPreviewImage } from '@ascii-motion/premium';
 import type { SessionData } from '@ascii-motion/premium';
 import type { ExportDataBundle } from '../types/export';
 import { saveAs } from 'file-saver';
@@ -135,7 +135,7 @@ export function useCloudProjectActions() {
 
           // If we're updating a published project, regenerate preview images
           if (isUpdatingPublished) {
-            console.log('[CloudActions] Regenerating preview images for published project');
+            console.log('[CloudActions] Regenerating preview image for published project');
             try {
               // Get current frame
               const frameIndex = exportData.currentFrameIndex || 0;
@@ -145,8 +145,8 @@ export function useCloudProjectActions() {
                 throw new Error('Selected frame not found');
               }
 
-              // Generate new preview and thumbnail
-              const { preview, thumbnail } = await generatePreviewAndThumbnail(
+              // Generate new preview only (no thumbnail to save storage)
+              const preview = await generatePreview(
                 [frame],
                 {
                   width: sessionData.canvas.width,
@@ -154,34 +154,30 @@ export function useCloudProjectActions() {
                   backgroundColor: sessionData.canvas.canvasBackgroundColor,
                   fontSize: sessionData.typography?.fontSize || 16,
                   fontFamily: sessionData.typography?.selectedFontId || 'monospace'
-                },
-                { size: 200 } // Thumbnail size
+                }
               );
 
-              // Upload new images
-              const imageResult = await uploadProjectImages(
+              // Upload new preview
+              const uploadResult = await uploadPreviewImage(
                 project.id,
-                preview.blob,
-                thumbnail.blob
+                preview.blob
               );
 
-              // Add cache-busting timestamp to URLs to force browser/CDN refresh
+              // Add cache-busting timestamp to URL to force browser/CDN refresh
               const timestamp = Date.now();
-              const previewUrlWithCache = `${imageResult.preview.url}?v=${timestamp}`;
-              const thumbnailUrlWithCache = `${imageResult.thumbnail.url}?v=${timestamp}`;
+              const previewUrlWithCache = `${uploadResult.url}?v=${timestamp}`;
 
-              // Update project with new image URLs (with cache busting)
+              // Update project with new preview URL (with cache busting)
               await supabase
                 .from('projects')
                 .update({
                   preview_image_url: previewUrlWithCache,
-                  thumbnail_url: thumbnailUrlWithCache,
                 } as never) // Type assertion to bypass Supabase type inference
                 .eq('id', project.id);
 
-              console.log('[CloudActions] Preview images regenerated successfully with cache-busting timestamp');
+              console.log('[CloudActions] Preview image regenerated successfully with cache-busting timestamp');
             } catch (previewError) {
-              console.error('[CloudActions] Failed to regenerate preview images:', previewError);
+              console.error('[CloudActions] Failed to regenerate preview image:', previewError);
               // Don't fail the whole save if preview regeneration fails
             }
           }
