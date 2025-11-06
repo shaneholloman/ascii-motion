@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { Analytics } from '@vercel/analytics/react'
 import { CanvasProvider, useCanvasContext } from './contexts/CanvasContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { AuthProvider, useCloudProject } from '@ascii-motion/premium'
+import { AuthProvider, useCloudProject, GalleryHeaderText } from '@ascii-motion/premium'
 import { ThemeToggle } from './components/common/ThemeToggle'
 import { AccountButton } from './components/features/AccountButton'
 import { HamburgerMenu } from './components/features/HamburgerMenu'
@@ -24,6 +24,7 @@ import { PublishToGalleryDialogWrapper } from './components/features/PublishToGa
 import { PerformanceOverlay } from './components/common/PerformanceOverlay'
 import { EditorPage } from './pages/EditorPage'
 import { CommunityPage } from './pages/CommunityPage'
+import { Button } from './components/ui/button'
 
 /**
  * Inner component that uses auth hooks
@@ -120,6 +121,52 @@ function AppContent() {
 
   // Check if we're on community routes
   const isCommunityRoute = location.pathname.startsWith('/community')
+  
+  // State for gallery header text animation
+  const [isGalleryTextVisible, setIsGalleryTextVisible] = useState(false)
+  
+  // Setup IntersectionObserver for hero animation on gallery page
+  useEffect(() => {
+    if (!isCommunityRoute) {
+      setIsGalleryTextVisible(false)
+      return
+    }
+    
+    // Wait for the hero animation element to be rendered
+    const checkForHeroElement = () => {
+      const heroElement = document.querySelector('[data-hero-animation="true"]')
+      if (!heroElement) {
+        // Retry after a short delay if element not found
+        setTimeout(checkForHeroElement, 100)
+        return
+      }
+      
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            // Show text when hero is NOT in viewport (exiting)
+            // Hide text when hero IS in viewport (entering)
+            setIsGalleryTextVisible(!entry.isIntersecting)
+          })
+        },
+        {
+          threshold: 0.1, // Trigger when 10% of hero is visible
+          rootMargin: '0px',
+        }
+      )
+      
+      observer.observe(heroElement)
+      
+      return () => {
+        observer.disconnect()
+      }
+    }
+    
+    // Start checking for the hero element
+    const cleanup = checkForHeroElement()
+    
+    return cleanup
+  }, [isCommunityRoute, location.pathname])
 
   // Update dialog visibility when recovery state changes
   useEffect(() => {
@@ -135,48 +182,93 @@ function AppContent() {
 
   return (
     <div className="h-screen grid grid-rows-[auto_1fr] bg-background text-foreground">
-        {/* Header - compact */}
-        <header className="flex-shrink-0 border-b border-border/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
-          <div className="px-4 py-2">
-            <div className="flex justify-between items-center">
-              <div className="flex gap-3 relative items-center">
-                {/* Show hamburger menu only on editor routes */}
-                {!isCommunityRoute && (
-                  <HamburgerMenu 
-                    onOpenGallery={() => navigate('/community')}
-                    onOpenPublish={() => setShowPublishDialog(true)}
-                  />
-                )}
-                <div
-                  onClick={() => {
-                    // If on community route, mark that we're navigating from community
-                    if (isCommunityRoute) {
-                      sessionStorage.setItem('from-community', 'true');
-                    }
-                    navigate('/');
-                  }}
-                  className="ascii-logo ascii-logo-selectable font-mono tracking-tighter whitespace-pre hover:opacity-80 transition-opacity cursor-pointer"
-                  aria-label="ASCII Motion logo"
-                >
-                  <span className="text-purple-500">----▗▄▖  ▗▄▄▖ ▗▄▄▖▗▄▄▄▖▗▄▄▄▖    ▗▖  ▗▖ ▗▄▖▗▄▄▄▖▗▄▄▄▖ ▗▄▖ ▗▖  ▗▖</span>
-                  <span className="text-purple-400"> --▐▌ ▐▌▐▌   ▐▌     █    █      ▐▛▚▞▜▌▐▌ ▐▌ █    █  ▐▌ ▐▌▐▛▚▖▐▌</span>
-                  <span className="text-purple-400">  -▐▛▀▜▌ ▝▀▚▖▐▌     █    █      ▐▌  ▐▌▐▌ ▐▌ █    █  ▐▌ ▐▌▐▌ ▝▜▌</span>
-                  <span className="text-purple-300">  -▐▌ ▐▌▗▄▄▞▘▝▚▄▄▖▗▄█▄▖▗▄█▄▖    ▐▌  ▐▌▝▚▄▞▘ █  ▗▄█▄▖▝▚▄▞▘▐▌  ▐▌</span>
-                </div>
-              </div>
-              {/* Show project editor only on editor routes */}
-              {!isCommunityRoute && (
-                <div className="flex-1 flex justify-center">
-                  <InlineProjectNameEditor />
-                </div>
+        {/* Header - adaptive design with fixed height */}
+        <header className="flex-shrink-0 border-b border-border/30 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 h-16">
+          <div className="px-4 h-full">
+            <div className="flex items-center h-full">
+              {isCommunityRoute ? (
+                /* Community Gallery Header Layout */
+                <>
+                  {/* Left side - CTA button */}
+                  <div className="flex gap-3 items-center flex-shrink-0">
+                    {/* "Start creating" CTA button with arrow */}
+                    <Button
+                      onClick={() => {
+                        window.location.href = 'https://ascii-motion.app';
+                      }}
+                      size="default"
+                      className="hidden sm:flex gap-2"
+                    >
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="16"
+                        height="16"
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth="2"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <path d="M19 12H5M12 19l-7-7 7-7" />
+                      </svg>
+                      Start creating
+                    </Button>
+                  </div>
+                  
+                  {/* Center - Animated Gallery Text (slides in from bottom) */}
+                  <div className="flex-1 flex items-center justify-center overflow-hidden" style={{ height: '64px' }}>
+                    <div
+                      className={`transition-all duration-300 ease-in-out ${
+                        isGalleryTextVisible
+                          ? 'translate-y-0 opacity-100'
+                          : 'translate-y-full opacity-0'
+                      }`}
+                    >
+                      <GalleryHeaderText autoPlay={true} />
+                    </div>
+                  </div>
+                  
+                  {/* Right side - Theme toggle + Account */}
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    <ThemeToggle />
+                    <AccountButton />
+                  </div>
+                </>
+              ) : (
+                /* Editor Header Layout */
+                <>
+                  {/* Left side - Hamburger + ASCII Motion Logo */}
+                  <div className="flex gap-3 relative items-center">
+                    <HamburgerMenu 
+                      onOpenGallery={() => navigate('/community')}
+                      onOpenPublish={() => setShowPublishDialog(true)}
+                    />
+                    <div
+                      onClick={() => navigate('/')}
+                      className="ascii-logo ascii-logo-selectable font-mono tracking-tighter whitespace-pre hover:opacity-80 transition-opacity cursor-pointer"
+                      aria-label="ASCII Motion logo"
+                    >
+                      <span className="text-purple-500">----▗▄▖  ▗▄▄▖ ▗▄▄▖▗▄▄▄▖▗▄▄▄▖    ▗▖  ▗▖ ▗▄▖▗▄▄▄▖▗▄▄▄▖ ▗▄▖ ▗▖  ▗▖</span>
+                      <span className="text-purple-400"> --▐▌ ▐▌▐▌   ▐▌     █    █      ▐▛▚▞▜▌▐▌ ▐▌ █    █  ▐▌ ▐▌▐▛▚▖▐▌</span>
+                      <span className="text-purple-400">  -▐▛▀▜▌ ▝▀▚▖▐▌     █    █      ▐▌  ▐▌▐▌ ▐▌ █    █  ▐▌ ▐▌▐▌ ▝▜▌</span>
+                      <span className="text-purple-300">  -▐▌ ▐▌▗▄▄▞▘▝▚▄▄▖▗▄█▄▖▗▄█▄▖    ▐▌  ▐▌▝▚▄▞▘ █  ▗▄█▄▖▝▚▄▞▘▐▌  ▐▌</span>
+                    </div>
+                  </div>
+                  
+                  {/* Center - Project name editor */}
+                  <div className="flex-1 flex justify-center">
+                    <InlineProjectNameEditor />
+                  </div>
+                  
+                  {/* Right side - Export/Import + Theme toggle + Account */}
+                  <div className="flex items-center gap-2">
+                    <ExportImportButtons />
+                    <ThemeToggle />
+                    <AccountButton />
+                  </div>
+                </>
               )}
-              {isCommunityRoute && <div className="flex-1" />}
-              <div className="flex items-center gap-2">
-                {/* Show export/import only on editor routes */}
-                {!isCommunityRoute && <ExportImportButtons />}
-                <ThemeToggle />
-                <AccountButton />
-              </div>
             </div>
           </div>
         </header>

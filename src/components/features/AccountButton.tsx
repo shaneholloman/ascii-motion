@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogIn, Crown, LogOut, Settings, User, UserCircle } from 'lucide-react';
+import { LogIn, Crown, LogOut, Settings, User, UserCircle, Shield } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,12 +15,13 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAuth, SignUpDialog, SignInDialog, PasswordResetDialog, AccountSettingsDialog, ProfileSettingsDialog } from '@ascii-motion/premium';
+import { useAuth, SignUpDialog, SignInDialog, PasswordResetDialog, AccountSettingsDialog, ProfileSettingsDialog, useAdminCheck } from '@ascii-motion/premium';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 
 export function AccountButton() {
   const { user, profile, loading, signOut } = useAuth();
+  const { isAdmin } = useAdminCheck();
   const [showSignUp, setShowSignUp] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
@@ -157,6 +158,18 @@ export function AccountButton() {
             <span>Account Settings</span>
           </DropdownMenuItem>
           <DropdownMenuSeparator />
+          
+          {/* Admin Panel Link (only visible to admins) */}
+          {isAdmin && (
+            <>
+              <DropdownMenuItem onClick={() => window.location.href = '/community/admin/moderation'}>
+                <Shield className="mr-2 h-4 w-4" />
+                <span>Admin Panel</span>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+            </>
+          )}
+          
           <DropdownMenuItem onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
             <span>Sign out</span>
