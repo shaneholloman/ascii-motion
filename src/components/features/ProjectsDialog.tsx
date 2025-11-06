@@ -168,9 +168,9 @@ export function ProjectsDialog({
     };
   };
 
-  // Check if user is on pro tier
+  // Check if user is on pro tier or is an admin
   const isProUser = () => {
-    return userProfile?.subscriptionTier?.name === 'pro';
+    return userProfile?.subscriptionTier?.name === 'pro' || userProfile?.isAdmin === true;
   };
 
   const handleOpenProject = async (project: CloudProject) => {
