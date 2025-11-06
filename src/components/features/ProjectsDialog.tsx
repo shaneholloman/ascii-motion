@@ -439,13 +439,24 @@ export function ProjectsDialog({
                       ) : (
                         <>
                           <div className="flex-1">
-                            <CardTitle 
-                              className="text-base cursor-pointer hover:text-primary transition-colors line-clamp-3"
-                              onClick={() => handleRenameStart(project)}
-                              title="Click to rename"
-                            >
-                              {project.name}
-                            </CardTitle>
+                            <div className="flex items-center gap-2">
+                              <CardTitle 
+                                className="text-base cursor-pointer hover:text-primary transition-colors line-clamp-3"
+                                onClick={() => handleRenameStart(project)}
+                                title="Click to rename"
+                              >
+                                {project.name}
+                              </CardTitle>
+                              {project.isPublished && (
+                                <Badge 
+                                  variant="secondary"
+                                  className="text-xs px-2 py-0 h-5 shrink-0"
+                                  style={{ backgroundColor: '#06b6d4', color: 'white' }}
+                                >
+                                  PUBLISHED
+                                </Badge>
+                              )}
+                            </div>
                             <CardDescription>
                               {project.sessionData?.animation?.frames?.length ?? 0} frame{(project.sessionData?.animation?.frames?.length ?? 0) !== 1 ? 's' : ''}
                             </CardDescription>
@@ -587,9 +598,20 @@ export function ProjectsDialog({
                             <CardHeader>
                               <div className="flex items-start justify-between">
                                 <div className="flex-1">
-                                  <CardTitle className="text-base line-clamp-3">
-                                    {project.name}
-                                  </CardTitle>
+                                  <div className="flex items-center gap-2">
+                                    <CardTitle className="text-base line-clamp-3">
+                                      {project.name}
+                                    </CardTitle>
+                                    {project.isPublished && (
+                                      <Badge 
+                                        variant="secondary"
+                                        className="text-xs px-2 py-0 h-5 shrink-0"
+                                        style={{ backgroundColor: '#06b6d4', color: 'white' }}
+                                      >
+                                        PUBLISHED
+                                      </Badge>
+                                    )}
+                                  </div>
                                   <CardDescription>
                                     {project.sessionData?.animation?.frames?.length ?? 0} frame{(project.sessionData?.animation?.frames?.length ?? 0) !== 1 ? 's' : ''}
                                   </CardDescription>
