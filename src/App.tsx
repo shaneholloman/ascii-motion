@@ -4,7 +4,7 @@ import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from
 import { Analytics } from '@vercel/analytics/react'
 import { CanvasProvider, useCanvasContext } from './contexts/CanvasContext'
 import { ThemeProvider } from './contexts/ThemeContext'
-import { AuthProvider, useCloudProject, GalleryHeaderText } from '@ascii-motion/premium'
+import { AuthProvider, useCloudProject, GalleryHeaderText, NotificationButton } from '@ascii-motion/premium'
 import { ThemeToggle } from './components/common/ThemeToggle'
 import { AccountButton } from './components/features/AccountButton'
 import { HamburgerMenu } from './components/features/HamburgerMenu'
@@ -235,6 +235,7 @@ function AppContent() {
                   {/* Right side - Theme toggle + Account */}
                   <div className="flex items-center gap-2 flex-shrink-0">
                     <ThemeToggle />
+                    {user && <NotificationButton />}
                     <AccountButton />
                   </div>
                 </>
@@ -268,6 +269,7 @@ function AppContent() {
                   <div className="flex items-center gap-2">
                     <ExportImportButtons />
                     <ThemeToggle />
+                    {user && <NotificationButton />}
                     <AccountButton />
                   </div>
                 </>
