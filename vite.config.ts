@@ -37,5 +37,10 @@ export default defineConfig({
       // FFmpeg video export won't work in dev, test in production instead
       // Production uses COEP: credentialless which supports both
     },
+    hmr: {
+      // Increase timeout to prevent disconnection when tab is inactive
+      timeout: 30000, // 30 seconds instead of default ~5 seconds
+      overlay: true,
+    },
   },
 })
