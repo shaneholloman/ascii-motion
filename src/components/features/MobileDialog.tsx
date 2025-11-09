@@ -3,9 +3,13 @@
  * 
  * Shows on mobile devices to inform users that ASCII Motion
  * is a desktop-only web application.
+ * 
+ * NOTE: Only shows for the main editor route (/), not for community routes.
+ * Community gallery, project details, and user profiles should be viewable on mobile.
  */
 
 import React from 'react';
+import { useLocation } from 'react-router-dom';
 import { Dialog, DialogContent, DialogTitle } from '@/components/ui/dialog';
 import { WelcomeAsciiAnimation } from './WelcomeAsciiAnimation';
 
@@ -27,20 +31,28 @@ const isMobileDevice = (): boolean => {
 };
 
 export const MobileDialog: React.FC = () => {
+  const location = useLocation();
   const [isOpen, setIsOpen] = React.useState(false);
   const [isMobile, setIsMobile] = React.useState(false);
+  
+  // Check if we're on a community route (gallery, project details, user profiles)
+  const isCommunityRoute = location.pathname.startsWith('/community');
   
   // Check if mobile on mount
   React.useEffect(() => {
     const mobile = isMobileDevice();
     setIsMobile(mobile);
-    if (mobile) {
+    
+    // Only show dialog on mobile for non-community routes
+    if (mobile && !isCommunityRoute) {
       setIsOpen(true);
+    } else {
+      setIsOpen(false);
     }
-  }, []);
+  }, [isCommunityRoute]);
   
-  // Don't render anything if not mobile
-  if (!isMobile) return null;
+  // Don't render anything if not mobile or on community route
+  if (!isMobile || isCommunityRoute) return null;
   
   return (
     <Dialog open={isOpen} modal={true}>
