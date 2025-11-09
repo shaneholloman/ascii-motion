@@ -24,7 +24,13 @@
     "deploy:major": "npm run version:minor && npm run build:prod && vercel --prod",
     "deploy:preview": "vercel",
     "check-licenses": "node scripts/check-licenses.js",
-    "docs-check": "echo '📋 Documentation Health Check:' && echo '1. Do COPILOT_INSTRUCTIONS.md patterns match current code?' && echo '2. Are all DEVELOPMENT.md step statuses accurate?' && echo '3. Do all file paths in docs exist?' && echo '4. Run npm run dev to verify no breaking changes' && npm run dev"
+    "docs-check": "echo '📋 Documentation Health Check:' && echo '1. Do COPILOT_INSTRUCTIONS.md patterns match current code?' && echo '2. Are all DEVELOPMENT.md step statuses accurate?' && echo '3. Do all file paths in docs exist?' && echo '4. Run npm run dev to verify no breaking changes' && npm run dev",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "backfill-thumbnails": "tsx packages/premium/scripts/backfill-thumbnails.ts",
+    "backfill-thumbnails:dry-run": "tsx packages/premium/scripts/backfill-thumbnails.ts --dry-run"
   },
   "dependencies": {
     "@ffmpeg/core": "^0.12.10",
@@ -74,8 +80,9 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.33.0",
+    "@playwright/test": "^1.56.1",
     "@types/dompurify": "^3.2.0",
-    "@types/node": "^24.3.0",
+    "@types/node": "^24.10.0",
     "@types/react": "^19.1.10",
     "@types/react-dom": "^19.1.7",
     "@vitejs/plugin-react": "^5.0.0",
@@ -87,6 +94,7 @@
     "postcss": "^8.5.6",
     "shadcn": "^3.1.0",
     "tailwindcss": "^3.4.17",
+    "tsx": "^4.20.6",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.39.1",
     "vite": "^7.1.2"

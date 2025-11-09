@@ -16,7 +16,7 @@
 
 import { useCallback, useState } from 'react';
 import { useCloudProject, supabase } from '@ascii-motion/premium';
-import { generatePreview, uploadPreviewImage } from '@ascii-motion/premium';
+import { generatePreview, uploadPreviewImage, getFontStack } from '@ascii-motion/premium';
 import type { SessionData } from '@ascii-motion/premium';
 import type { ExportDataBundle } from '../types/export';
 import { saveAs } from 'file-saver';
@@ -153,7 +153,7 @@ export function useCloudProjectActions() {
                   height: sessionData.canvas.height,
                   backgroundColor: sessionData.canvas.canvasBackgroundColor,
                   fontSize: sessionData.typography?.fontSize || 16,
-                  fontFamily: sessionData.typography?.selectedFontId || 'monospace'
+                  fontFamily: getFontStack(sessionData.typography?.selectedFontId)
                 }
               );
 
