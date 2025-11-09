@@ -111,7 +111,7 @@ export function AccountButton() {
   const email = user.email || 'User';
   const firstLetter = email[0].toUpperCase();
   const tierName = profile?.subscription_tier?.display_name || 'Free Plan';
-  // @ts-ignore - display_name now comes from user_profiles_public join
+  // @ts-expect-error - display_name now comes from user_profiles_public join
   const userDisplayName = profile?.display_name;
 
   return (

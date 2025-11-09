@@ -11,7 +11,7 @@ import { HamburgerMenu } from './components/features/HamburgerMenu'
 import { ExportImportButtons } from './components/features/ExportImportButtons'
 import { useCloudDialogState } from './hooks/useCloudDialogState'
 import { useCloudProjectActions } from './hooks/useCloudProjectActions'
-import { useAuth, usePasswordRecoveryCallback, UpdatePasswordDialog } from '@ascii-motion/premium'
+import { useAuth, usePasswordRecoveryCallback, useEmailVerificationCallback, UpdatePasswordDialog, SignInDialog } from '@ascii-motion/premium'
 import { InlineProjectNameEditor } from './components/features/InlineProjectNameEditor'
 import { SaveToCloudDialog } from './components/features/SaveToCloudDialog'
 import { ProjectsDialog } from './components/features/ProjectsDialog'
@@ -113,6 +113,22 @@ function AppContent() {
   // Password recovery callback detection
   const { isRecovery, resetRecovery } = usePasswordRecoveryCallback()
   const [showUpdatePasswordDialog, setShowUpdatePasswordDialog] = useState(isRecovery)
+
+  // Email verification callback detection
+  useEmailVerificationCallback()
+
+  // State for sign-in dialog (for email verification toast button)
+  const [showSignInDialog, setShowSignInDialog] = useState(false)
+
+  // Listen for custom event to open sign-in dialog
+  useEffect(() => {
+    const handleOpenSignIn = () => {
+      setShowSignInDialog(true)
+    }
+    
+    window.addEventListener('open-signin-dialog', handleOpenSignIn)
+    return () => window.removeEventListener('open-signin-dialog', handleOpenSignIn)
+  }, [])
 
   // Navigation
   const navigate = useNavigate()
@@ -330,6 +346,12 @@ function AppContent() {
           <UpdatePasswordDialog 
             open={showUpdatePasswordDialog} 
             onOpenChange={handleUpdatePasswordClose}
+          />
+          
+          {/* Sign In Dialog - Shows after email verification */}
+          <SignInDialog 
+            open={showSignInDialog} 
+            onOpenChange={setShowSignInDialog}
           />
           
           {/* Mobile Dialog - Shows on mobile devices to inform about desktop-only support */}

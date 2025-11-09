@@ -21,18 +21,18 @@ export const ProjectCanvasPreview: React.FC<ProjectCanvasPreviewProps> = ({
   project,
   height = 120,
 }) => {
-  // Safety check for sessionData
-  if (!project.sessionData?.canvas || !project.sessionData?.animation?.frames) {
-    return null;
-  }
-
   // Calculate width based on canvas aspect ratio
-  const canvasWidth = project.sessionData.canvas.width ?? 80;
-  const canvasHeight = project.sessionData.canvas.height ?? 24;
+  const canvasWidth = project.sessionData?.canvas?.width ?? 80;
+  const canvasHeight = project.sessionData?.canvas?.height ?? 24;
   const aspectRatio = canvasWidth / canvasHeight;
   const width = Math.round(height * aspectRatio);
 
   const previewDataUrl = useMemo(() => {
+    // Safety check for sessionData
+    if (!project.sessionData?.canvas || !project.sessionData?.animation?.frames) {
+      return null;
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     if (!ctx) return null;
