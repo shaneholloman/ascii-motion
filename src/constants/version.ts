@@ -1,12 +1,27 @@
 // Auto-generated version file - DO NOT EDIT MANUALLY
 // This file is updated by scripts/version-bump.js during deployment
 
-export const VERSION = "0.2.21";
-export const BUILD_DATE = "2025-10-31T19:37:04.030Z";
-export const BUILD_HASH = "1d11516";
+export const VERSION = "0.2.22";
+export const BUILD_DATE = "2025-11-10T18:58:21.095Z";
+export const BUILD_HASH = "badca1d";
 
 // Version history with commit messages
 export const VERSION_HISTORY = [
+  {
+    "version": "0.2.22",
+    "date": "2025-11-10T18:58:21.095Z",
+    "commits": [
+      "chore: Update premium submodule to merged main (performance fixes)",
+      "chore: Update premium submodule (database performance fixes)",
+      "Update flag",
+      "feat: Community Gallery Feature - Phase 12 Production Release",
+      "hotfix: Update premium submodule with additional null safety fixes",
+      "Merge hotfix: Defensive null checks for ProjectsDialog",
+      "hotfix: Add defensive null checks for sessionData in ProjectsDialog",
+      "feat(community): Phase 0 - Add feature flag system for community showcase",
+      "Update version num"
+    ]
+  },
   {
     "version": "0.2.21",
     "date": "2025-10-31T19:37:04.030Z",
