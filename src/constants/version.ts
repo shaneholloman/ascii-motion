@@ -1,12 +1,22 @@
 // Auto-generated version file - DO NOT EDIT MANUALLY
 // This file is updated by scripts/version-bump.js during deployment
 
-export const VERSION = "0.2.25";
-export const BUILD_DATE = "2025-11-11T17:20:58.278Z";
-export const BUILD_HASH = "7e9d8f1";
+export const VERSION = "0.2.26";
+export const BUILD_DATE = "2025-11-11T22:06:18.097Z";
+export const BUILD_HASH = "e3eb0a8";
 
 // Version history with commit messages
 export const VERSION_HISTORY = [
+  {
+    "version": "0.2.26",
+    "date": "2025-11-11T22:06:18.097Z",
+    "commits": [
+      "Improved canvas response speed",
+      "Fixed cursor placement",
+      "Update flag",
+      "Fixed multiple auth checks"
+    ]
+  },
   {
     "version": "0.2.25",
     "date": "2025-11-11T17:20:58.278Z",

@@ -74,6 +74,36 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
     mode: 'none',
     cells: [],
   });
+  
+  // Optimized setter that only updates if preview actually changed
+  const setHoverPreviewOptimized = useCallback((preview: CanvasContextValue['hoverPreview']) => {
+    setHoverPreview((prev) => {
+      // If active state changed, always update
+      if (prev.active !== preview.active) return preview;
+      
+      // If mode changed, always update
+      if (prev.mode !== preview.mode) return preview;
+      
+      // If both inactive, no need to update
+      if (!prev.active && !preview.active) return prev;
+      
+      // Check if cells array actually changed (length or content)
+      if (prev.cells.length !== preview.cells.length) return preview;
+      
+      // For active previews, check if cell coordinates changed
+      if (prev.active && preview.active && prev.cells.length > 0 && preview.cells.length > 0) {
+        // Quick check: compare first and last cell only (optimization)
+        const firstChanged = prev.cells[0].x !== preview.cells[0].x || prev.cells[0].y !== preview.cells[0].y;
+        const lastChanged = prev.cells[prev.cells.length - 1].x !== preview.cells[preview.cells.length - 1].x || 
+                           prev.cells[prev.cells.length - 1].y !== preview.cells[preview.cells.length - 1].y;
+        
+        if (firstChanged || lastChanged) return preview;
+      }
+      
+      // No meaningful change, return previous reference
+      return prev;
+    });
+  }, []);
 
   const [moveState, setMoveState] = useState<CanvasContextValue['moveState']>(null);
   const [selectionPreviewState, setSelectionPreviewState] = useState<SelectionPreviewState>({
@@ -180,7 +210,7 @@ export const CanvasProvider: React.FC<CanvasProviderProps> = ({
     setPendingSelectionStart,
     setJustCommittedMove,
     setHoveredCell: setHoveredCellOptimized,
-    setHoverPreview,
+    setHoverPreview: setHoverPreviewOptimized,
     setMoveState,
     startPasteMode,
     updatePastePosition,

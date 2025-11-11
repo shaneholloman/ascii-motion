@@ -708,7 +708,7 @@ export const CanvasOverlay: React.FC = () => {
     
     // Draw hover cell outline (subtle outline for current cell under cursor)
     if (hoveredCell && hoveredCell.x >= 0 && hoveredCell.x < width && hoveredCell.y >= 0 && hoveredCell.y < height) {
-      ctx.strokeStyle = 'rgba(59, 130, 246, 0.5)'; // 50% opacity blue outline
+      ctx.strokeStyle = 'rgba(168, 85, 247, 0.5)'; // 50% opacity purple outline
       ctx.lineWidth = 2;
       ctx.setLineDash([]);
       ctx.strokeRect(
@@ -820,9 +820,28 @@ export const CanvasOverlay: React.FC = () => {
     zoom
   ]);
 
-  // Re-render overlay when dependencies change
+  // Re-render overlay when dependencies change, throttled with RAF
   useEffect(() => {
-    renderOverlay();
+    let rafId: number | null = null;
+    
+    const scheduleRender = () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+      
+      rafId = requestAnimationFrame(() => {
+        renderOverlay();
+        rafId = null;
+      });
+    };
+    
+    scheduleRender();
+    
+    return () => {
+      if (rafId !== null) {
+        cancelAnimationFrame(rafId);
+      }
+    };
   }, [renderOverlay]);
 
   return (

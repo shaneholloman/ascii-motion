@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef, useMemo } from 'react';
 import { useToolStore } from '../stores/toolStore';
 import { useCanvasContext } from '../contexts/CanvasContext';
 import { calculateBrushCells } from '../utils/brushUtils';
@@ -25,71 +25,91 @@ export const useHoverPreview = () => {
   const { hoveredCell, fontMetrics, setHoverPreview, isDrawing } = useCanvasContext();
   const activeBrush = activeTool === 'eraser' ? brushSettings.eraser : brushSettings.pencil;
   
-  useEffect(() => {
-    // Don't show preview while actively drawing
-    if (isDrawing) {
-      setHoverPreview({ active: false, mode: 'none', cells: [] });
-      return;
-    }
-    
-    // Clear preview when mouse leaves canvas
-    if (!hoveredCell) {
-      setHoverPreview({ active: false, mode: 'none', cells: [] });
-      return;
-    }
-    
-    // Calculate preview based on active tool
-    switch (activeTool) {
-      case 'pencil':
-      case 'eraser': {
-        // Calculate brush pattern cells
-        const brushCells = calculateBrushCells(
-          hoveredCell.x,
-          hoveredCell.y,
-          activeBrush.size,
-          activeBrush.shape,
-          fontMetrics.aspectRatio
-        );
+  // Use RAF to throttle updates
+  const rafIdRef = useRef<number | null>(null);
+  
+  // Memoize brush pattern calculation - only recalculate when brush settings change
+  const brushCellsCache = useRef<Map<string, { x: number; y: number }[]>>(new Map());
+  
+  const getBrushCells = useMemo(() => {
+    return (x: number, y: number, size: number, shape: string, aspectRatio: number) => {
+      const cacheKey = `${x},${y},${size},${shape},${aspectRatio}`;
+      
+      if (!brushCellsCache.current.has(cacheKey)) {
+        // Limit cache size to prevent memory issues
+        if (brushCellsCache.current.size > 100) {
+          const firstKey = brushCellsCache.current.keys().next().value;
+          if (firstKey) brushCellsCache.current.delete(firstKey);
+        }
         
-        setHoverPreview({
-          active: true,
-          mode: activeTool === 'eraser' ? 'eraser-brush' : 'brush',
-          cells: brushCells
-        });
-        break;
+        const cells = calculateBrushCells(x, y, size, shape as any, aspectRatio);
+        brushCellsCache.current.set(cacheKey, cells);
       }
       
-      // Future tool modes can be added here:
-      // case 'rectangle':
-      //   if (rectangleStartPoint) {
-      //     const cells = calculateRectangleCells(
-      //       rectangleStartPoint,
-      //       hoveredCell,
-      //       rectangleFilled
-      //     );
-      //     setHoverPreview({ active: true, mode: 'rectangle', cells });
-      //   }
-      //   break;
-      //
-      // case 'ellipse':
-      //   // Similar pattern for ellipse
-      //   break;
-      //
-      // case 'line':
-      //   // Similar pattern for line
-      //   break;
-      
-      default:
-        // No hover preview for other tools (selection, eyedropper, etc.)
-        setHoverPreview({ active: false, mode: 'none', cells: [] });
+      return brushCellsCache.current.get(cacheKey)!;
+    };
+  }, []);
+  
+  useEffect(() => {
+    // Cancel any pending RAF
+    if (rafIdRef.current !== null) {
+      cancelAnimationFrame(rafIdRef.current);
     }
+    
+    // Throttle updates using RAF
+    rafIdRef.current = requestAnimationFrame(() => {
+      // Don't show preview while actively drawing
+      if (isDrawing) {
+        setHoverPreview({ active: false, mode: 'none', cells: [] });
+        return;
+      }
+      
+      // Clear preview when mouse leaves canvas
+      if (!hoveredCell) {
+        setHoverPreview({ active: false, mode: 'none', cells: [] });
+        return;
+      }
+      
+      // Calculate preview based on active tool
+      switch (activeTool) {
+        case 'pencil':
+        case 'eraser': {
+          // Use cached brush pattern calculation
+          const brushCells = getBrushCells(
+            hoveredCell.x,
+            hoveredCell.y,
+            activeBrush.size,
+            activeBrush.shape,
+            fontMetrics.aspectRatio
+          );
+          
+          setHoverPreview({
+            active: true,
+            mode: activeTool === 'eraser' ? 'eraser-brush' : 'brush',
+            cells: brushCells
+          });
+          break;
+        }
+        
+        default:
+          // No hover preview for other tools (selection, eyedropper, etc.)
+          setHoverPreview({ active: false, mode: 'none', cells: [] });
+      }
+    });
+    
+    return () => {
+      if (rafIdRef.current !== null) {
+        cancelAnimationFrame(rafIdRef.current);
+      }
+    };
   }, [
     hoveredCell, 
     activeTool, 
-  activeBrush.size,
-  activeBrush.shape,
+    activeBrush.size,
+    activeBrush.shape,
     fontMetrics.aspectRatio,
     isDrawing,
-    setHoverPreview
+    setHoverPreview,
+    getBrushCells
   ]);
 };
