@@ -32,6 +32,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Textarea } from '../ui/textarea';
+import { Progress } from '../ui/progress';
 import { Loader2, Cloud, CloudUpload } from 'lucide-react';
 import { UpgradeToProDialog } from './UpgradeToProDialog';
 
@@ -43,7 +44,7 @@ interface SaveToCloudDialogProps {
 export function SaveToCloudDialog({ open, onOpenChange }: SaveToCloudDialogProps) {
   const { user } = useAuth();
   const exportData = useExportDataCollector();
-  const { handleSaveToCloud } = useCloudProjectActions();
+  const { handleSaveToCloud, saveProgress, saveProgressMessage } = useCloudProjectActions();
   const { getUserProfile, listProjects } = useCloudProject();
   const { 
     projectName: storedProjectName, 
@@ -225,6 +226,21 @@ export function SaveToCloudDialog({ open, onOpenChange }: SaveToCloudDialogProps
               <p className="text-sm text-destructive">{descriptionError}</p>
             )}
           </div>
+
+          {/* Save Progress Bar */}
+          {saving && saveProgress > 0 && (
+            <div className="grid gap-2 pt-2">
+              <div className="flex justify-between items-center">
+                <Label className="text-sm text-muted-foreground">
+                  {saveProgressMessage || 'Saving...'}
+                </Label>
+                <span className="text-xs text-muted-foreground">
+                  {Math.round(saveProgress)}%
+                </span>
+              </div>
+              <Progress value={saveProgress} className="h-2" />
+            </div>
+          )}
         </div>
 
         <DialogFooter>

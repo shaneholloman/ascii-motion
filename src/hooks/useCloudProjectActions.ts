@@ -28,7 +28,7 @@ export function useCloudProjectActions() {
   const [showProjectsDialog, setShowProjectsDialog] = useState(false);
   const [projectsRefreshTrigger, setProjectsRefreshTrigger] = useState(0);
 
-  const { saveToCloud } = useCloudProject();
+  const { saveToCloud, saveProgress, saveProgressMessage } = useCloudProject();
   const { importSession } = useSessionImporter();
 
   /**
@@ -303,6 +303,8 @@ export function useCloudProjectActions() {
     showProjectsDialog,
     setShowProjectsDialog,
     projectsRefreshTrigger, // Export trigger for project list refresh
+    saveProgress, // Progress tracking for save operations
+    saveProgressMessage, // Progress message for save operations
 
     // Actions
     handleSaveToCloud,
