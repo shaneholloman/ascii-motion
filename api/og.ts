@@ -22,16 +22,23 @@ export const config = {
 
 export default async function handler(req: Request) {
   const url = new URL(req.url)
+  const userAgent = req.headers.get('user-agent') || ''
+  
+  // Detect if this is a bot/crawler that needs OG tags
+  const isCrawler = /bot|crawler|spider|crawling|facebookexternalhit|twitterbot|linkedinbot|slackbot|whatsapp|telegrambot/i.test(userAgent)
+  
+  // If not a crawler, serve the SPA directly
+  if (!isCrawler) {
+    // Rewrite to the SPA's index.html
+    return fetch(new URL('/index.html', url.origin))
+  }
   
   // Extract project ID from URL pattern: /community/project/:projectId
   const pathMatch = url.pathname.match(/^\/community\/project\/([a-f0-9-]+)/)
   
   if (!pathMatch) {
     // Not a project detail page, serve default
-    return new Response(null, {
-      status: 302,
-      headers: { Location: '/' },
-    })
+    return fetch(new URL('/index.html', url.origin))
   }
 
   const projectId = pathMatch[1]
@@ -59,10 +66,8 @@ export default async function handler(req: Request) {
 
     if (projectError || !project) {
       console.error('Project not found:', projectError)
-      return new Response(null, {
-        status: 302,
-        headers: { Location: '/community' },
-      })
+      // Serve the SPA which will handle the 404
+      return fetch(new URL('/index.html', url.origin))
     }
 
     // Fetch author display name
@@ -113,20 +118,9 @@ export default async function handler(req: Request) {
     <!-- Standard Favicon -->
     <link rel="icon" type="image/x-icon" href="/favicon.ico" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    
-    <!-- JavaScript redirect to SPA -->
-    <script>
-      // Redirect to the SPA which will handle the actual rendering
-      window.location.replace('${pageUrl}');
-    </script>
-    
-    <!-- Fallback noscript redirect -->
-    <noscript>
-      <meta http-equiv="refresh" content="0;url=${pageUrl}" />
-    </noscript>
   </head>
   <body>
-    <!-- Loading state while redirect happens -->
+    <!-- Static page for crawlers - no redirect needed -->
     <div style="
       position: fixed;
       inset: 0;
@@ -138,7 +132,11 @@ export default async function handler(req: Request) {
       font-family: 'Courier New', monospace;
     ">
       <div style="text-align: center;">
-        <p>Loading ${escapeHtml(project.name)}...</p>
+        <h1>${escapeHtml(project.name)}</h1>
+        <p>by ${escapeHtml(authorName)}</p>
+        <p style="margin-top: 1rem;">
+          <a href="${pageUrl}" style="color: hsl(0, 0%, 80%);">View on ASCII Motion</a>
+        </p>
       </div>
     </div>
   </body>
@@ -154,11 +152,8 @@ export default async function handler(req: Request) {
   } catch (error) {
     console.error('Error generating OG tags:', error)
     
-    // Fallback to redirect on error
-    return new Response(null, {
-      status: 302,
-      headers: { Location: '/community' },
-    })
+    // Fallback to SPA on error
+    return fetch(new URL('/index.html', url.origin))
   }
 }
 
