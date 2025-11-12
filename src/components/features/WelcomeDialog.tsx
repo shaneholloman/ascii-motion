@@ -330,6 +330,30 @@ const createWelcomeTabs = (
     },
   },
   {
+    id: 'community',
+    title: 'Publish to the community',
+    description: 'Logged-in users can share their work publicly in the community gallery. Explore, like, comment and remix projects to kickstart your ASCII art.',
+    cta: {
+      text: 'Create a free account',
+      action: () => {
+        closeDialog();
+        // Dispatch custom event to trigger signup dialog
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('openSignUpDialog'));
+        }, 100); // Small delay to ensure dialog has closed
+      },
+    },
+    secondaryCta: {
+      text: 'Visit the Gallery',
+      href: 'https://ascii-motion.com/community',
+    },
+    media: {
+      type: 'vimeo',
+      embedId: '1135994838',
+      alt: 'Community showcase gallery demonstration',
+    },
+  },
+  {
     id: 'opensource',
     title: 'Open Source',
     description: "ASCII Motion's core features are all open source. Contributions, bug reports, feature requests, and feedback are always welcome. Join our community and help make ASCII Motion even better!",
