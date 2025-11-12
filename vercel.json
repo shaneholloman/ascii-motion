@@ -44,6 +44,10 @@
   ],
   "rewrites": [
     {
+      "source": "/community/project/:projectId",
+      "destination": "/api/og?projectId=:projectId"
+    },
+    {
       "source": "/((?!api/.*).*)",
       "destination": "/index.html"
     }
