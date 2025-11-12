@@ -8,6 +8,9 @@ A web app for creating and animating ASCII/ANSI art.
 Current deployed version:
 https://ascii-motion.app
 
+See what people are making in the community gallery:
+https://ascii-motion.app/community
+
 <img width="2610" height="1758" alt="Screenshot of the ASCII Motion app UI" src="https://github.com/user-attachments/assets/e2be1571-c322-4c8f-bdef-10ab01eb9a05" />
 </br>
 
@@ -18,7 +21,10 @@ https://ascii-motion.app
 - Animation Timeline for frame-by-frame editing and onion skinning
 - Custom Color and Character Palettes including presets and import/export features
 - Convert images or video assets to ASCII art, with fine-tuned rendering control
+- Apply effects and filters to existing animations
+- Generate animations using a selection of procedural animation tools. 
 - Multiple Export Formats: Images (PNG, JPEG, SVG), Videos (MP4, WebM), Text files, JSON, HTML, and full session export
+- Publish to community gallery and explore what people are making. 
   
 ## 🚀 Quick Start
 
@@ -197,8 +203,8 @@ Where I'm at with the concept:
  <details>
 <summary> 🤝 Phase 7: Community and Marketing </summary>
    
-- [ ] Build a community sharing site to share and remix projects 
-- [ ] Create live link sharing tools 
+- [x] Build a community sharing site to share and remix projects 
+- [x] Create live link sharing tools 
 - [ ] Make marketing site
 - [ ] Create tutorial series
 - [ ] Create help and tool tip for in product on boarding
