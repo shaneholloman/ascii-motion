@@ -22,8 +22,19 @@ import { calculateBrushCells } from '../utils/brushUtils';
  */
 export const useHoverPreview = () => {
   const { activeTool, brushSettings } = useToolStore();
-  const { hoveredCell, fontMetrics, setHoverPreview, isDrawing } = useCanvasContext();
-  const activeBrush = activeTool === 'eraser' ? brushSettings.eraser : brushSettings.pencil;
+  const { hoveredCell, fontMetrics, setHoverPreview, isDrawing, altKeyDown, ctrlKeyDown } = useCanvasContext();
+  
+  // Calculate effective tool (Ctrl overrides pencil with eraser, Alt overrides drawing tools with eyedropper)
+  const drawingTools = ['pencil', 'eraser', 'paintbucket', 'rectangle', 'ellipse'];
+  const shouldAllowEyedropperOverride = drawingTools.includes(activeTool);
+  let effectiveTool = activeTool;
+  if (ctrlKeyDown && activeTool === 'pencil') {
+    effectiveTool = 'eraser';
+  } else if (altKeyDown && shouldAllowEyedropperOverride) {
+    effectiveTool = 'eyedropper';
+  }
+  
+  const activeBrush = effectiveTool === 'eraser' ? brushSettings.eraser : brushSettings.pencil;
   
   // Use RAF to throttle updates
   const rafIdRef = useRef<number | null>(null);
@@ -71,7 +82,7 @@ export const useHoverPreview = () => {
       }
       
       // Calculate preview based on active tool
-      switch (activeTool) {
+      switch (effectiveTool) {
         case 'pencil':
         case 'eraser': {
           // Use cached brush pattern calculation
@@ -85,7 +96,7 @@ export const useHoverPreview = () => {
           
           setHoverPreview({
             active: true,
-            mode: activeTool === 'eraser' ? 'eraser-brush' : 'brush',
+            mode: effectiveTool === 'eraser' ? 'eraser-brush' : 'brush',
             cells: brushCells
           });
           break;
@@ -104,7 +115,7 @@ export const useHoverPreview = () => {
     };
   }, [
     hoveredCell, 
-    activeTool, 
+    effectiveTool,
     activeBrush.size,
     activeBrush.shape,
     fontMetrics.aspectRatio,
