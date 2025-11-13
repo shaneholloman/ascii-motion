@@ -733,8 +733,15 @@ export const CanvasOverlay: React.FC = () => {
             };
           case 'eraser-brush':
             return {
-              fillStyle: 'rgba(248, 250, 252, 0.25)', // Soft neutral fill
-              strokeStyle: 'rgba(226, 232, 240, 0.7)', // Light gray outline
+              fillStyle: 'rgba(248, 250, 252, 0.15)', // Soft neutral fill
+              strokeStyle: 'rgba(226, 232, 240, 0.1)', // Light gray outline
+              lineWidth: 1,
+              lineDash: [4, 2] as [number, number]
+            };
+          case 'eraser-brush-active':
+            return {
+              fillStyle: 'rgba(248, 250, 252, 0.01)', // Much dimmer fill while erasing
+              strokeStyle: 'rgba(226, 232, 240, 0.05)', // Much dimmer outline while erasing
               lineWidth: 1,
               lineDash: [4, 2] as [number, number]
             };

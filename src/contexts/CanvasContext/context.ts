@@ -43,7 +43,7 @@ export interface CanvasState {
   hoveredCell: { x: number; y: number } | null;
   hoverPreview: {
     active: boolean;
-    mode: 'none' | 'brush' | 'eraser-brush' | 'rectangle' | 'ellipse' | 'line';
+    mode: 'none' | 'brush' | 'eraser-brush' | 'eraser-brush-active' | 'rectangle' | 'ellipse' | 'line';
     cells: Array<{ x: number; y: number }>;
   };
 
@@ -82,7 +82,7 @@ export interface CanvasActions {
   setHoveredCell: (cell: { x: number; y: number } | null) => void;
   setHoverPreview: (preview: {
     active: boolean;
-    mode: 'none' | 'brush' | 'eraser-brush' | 'rectangle' | 'ellipse' | 'line';
+    mode: 'none' | 'brush' | 'eraser-brush' | 'eraser-brush-active' | 'rectangle' | 'ellipse' | 'line';
     cells: Array<{ x: number; y: number }>;
   }) => void;
 

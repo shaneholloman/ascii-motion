@@ -69,8 +69,8 @@ export const useHoverPreview = () => {
     
     // Throttle updates using RAF
     rafIdRef.current = requestAnimationFrame(() => {
-      // Don't show preview while actively drawing
-      if (isDrawing) {
+      // Don't show preview while actively drawing (except for eraser - show dimmed version)
+      if (isDrawing && effectiveTool !== 'eraser') {
         setHoverPreview({ active: false, mode: 'none', cells: [] });
         return;
       }
@@ -94,9 +94,14 @@ export const useHoverPreview = () => {
             fontMetrics.aspectRatio
           );
           
+          // For eraser, use 'eraser-brush-active' mode when actively drawing to show dimmed preview
+          const mode = effectiveTool === 'eraser' 
+            ? (isDrawing ? 'eraser-brush-active' : 'eraser-brush')
+            : 'brush';
+          
           setHoverPreview({
             active: true,
-            mode: effectiveTool === 'eraser' ? 'eraser-brush' : 'brush',
+            mode,
             cells: brushCells
           });
           break;
