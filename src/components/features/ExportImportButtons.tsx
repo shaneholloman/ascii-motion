@@ -17,7 +17,7 @@ const EXPORT_OPTIONS = [
   {
     id: 'png' as ExportFormatId,
     name: 'Image',
-    description: 'Current frame as .png or .jpg',
+    description: 'Current frame as SVG/PNG/JPG',
     icon: FileImage,
   },
   {

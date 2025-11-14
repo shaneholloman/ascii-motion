@@ -1,12 +1,21 @@
 // Auto-generated version file - DO NOT EDIT MANUALLY
 // This file is updated by scripts/version-bump.js during deployment
 
-export const VERSION = "0.2.35";
-export const BUILD_DATE = "2025-11-13T19:24:23.520Z";
-export const BUILD_HASH = "db39aee";
+export const VERSION = "0.2.36";
+export const BUILD_DATE = "2025-11-13T20:22:32.452Z";
+export const BUILD_HASH = "c52f172";
 
 // Version history with commit messages
 export const VERSION_HISTORY = [
+  {
+    "version": "0.2.36",
+    "date": "2025-11-13T20:22:32.452Z",
+    "commits": [
+      "Fixed erasure overlay styling",
+      "Updated brush preview on ctrl toggle for eraser",
+      "Added ctrl click for eraser toggle"
+    ]
+  },
   {
     "version": "0.2.35",
     "date": "2025-11-13T19:24:23.520Z",

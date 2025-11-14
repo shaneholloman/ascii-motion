@@ -296,7 +296,7 @@ const createWelcomeTabs = (
   {
     id: 'export',
     title: 'Export Multiple Formats',
-    description: 'Export your creations in various formats: PNG/JPEG images, MP4/WebM videos, interactive HTML, plain text, JSON data, or as React components. Each format is optimized for different use cases and platforms.',
+    description: 'Export your creations in various formats: PNG/JPG/SVG images, MP4/WebM videos, interactive HTML, plain text, JSON data, or as React components. Each format is optimized for different use cases and platforms.',
     cta: {
       text: 'Export Your Work',
       action: () => {

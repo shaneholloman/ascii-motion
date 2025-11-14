@@ -8,10 +8,11 @@ import { Badge } from '../ui/badge';
 import { Switch } from '../ui/switch';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { Slider } from '../ui/slider';
-import { FileImage, Download, Settings, Loader2 } from 'lucide-react';
+import { FileImage, Download, Settings, Loader2, CheckCircle2, AlertTriangle } from 'lucide-react';
 import { useExportStore } from '../../stores/exportStore';
 import { useExportDataCollector } from '../../utils/exportDataCollector';
 import { useProjectMetadataStore } from '../../stores/projectMetadataStore';
+import { useCanvasContext } from '../../contexts/CanvasContext';
 import { ExportRenderer } from '../../utils/exportRenderer';
 import type { SvgExportSettings } from '../../types/export';
 import { 
@@ -20,6 +21,8 @@ import {
 	estimateImageFileSize,
 	estimateSvgFileSize
 } from '../../utils/exportPixelCalculator';
+import { getFontById } from '../../constants/fonts';
+import { detectAvailableFont, getFontFallbackMessage } from '../../utils/fontDetection';
 
 const FORMAT_OPTIONS: Array<{ value: 'png' | 'jpg' | 'svg'; label: string; description: string }> = [
 	{
@@ -55,8 +58,18 @@ export const ImageExportDialog: React.FC = () => {
 
 	const exportData = useExportDataCollector();
 	const projectName = useProjectMetadataStore((state) => state.projectName);
+	const { selectedFontId, actualFont: canvasActualFont, isFontDetecting: canvasIsFontDetecting } = useCanvasContext();
 
 	const [filename, setFilename] = useState(projectName || 'ascii-motion-frame');
+	const [svgFontStatus, setSvgFontStatus] = useState<{
+		isDetecting: boolean;
+		actualFont: string | null;
+		isFallback: boolean;
+	}>({
+		isDetecting: false,
+		actualFont: null,
+		isFallback: false
+	});
 
 	const isOpen = showExportModal && activeFormat === 'png';
 
@@ -66,6 +79,52 @@ export const ImageExportDialog: React.FC = () => {
 			setFilename(projectName);
 		}
 	}, [isOpen, projectName]);
+
+	// Detect font for SVG export (use canvas context font detection if available, otherwise detect)
+	useEffect(() => {
+		// Only run font detection for SVG format
+		if (imageSettings.format !== 'svg') {
+			setSvgFontStatus({
+				isDetecting: false,
+				actualFont: null,
+				isFallback: false
+			});
+			return;
+		}
+
+		// Use the canvas context's font detection if available
+		if (canvasActualFont && !canvasIsFontDetecting) {
+			const selectedFont = getFontById(selectedFontId);
+			const requestedFontName = selectedFont.name;
+			const isFallback = canvasActualFont !== requestedFontName && selectedFontId !== 'auto';
+			
+			setSvgFontStatus({
+				isDetecting: false,
+				actualFont: canvasActualFont,
+				isFallback
+			});
+		} else if (canvasIsFontDetecting) {
+			setSvgFontStatus({
+				isDetecting: true,
+				actualFont: null,
+				isFallback: false
+			});
+		} else {
+			// Fallback: run detection ourselves
+			const selectedFont = getFontById(selectedFontId);
+			setSvgFontStatus(prev => ({ ...prev, isDetecting: true }));
+			
+			detectAvailableFont(selectedFont.cssStack).then(actualFont => {
+				const isFallback = actualFont !== selectedFont.name && selectedFontId !== 'auto';
+				setSvgFontStatus({
+					isDetecting: false,
+					actualFont,
+					isFallback
+				});
+			});
+		}
+	}, [isOpen, imageSettings.format, selectedFontId, canvasActualFont, canvasIsFontDetecting]);
+	
 	const fileExtension = 
 		imageSettings.format === 'png' ? 'png' : 
 		imageSettings.format === 'jpg' ? 'jpg' : 'svg';
@@ -212,33 +271,33 @@ export const ImageExportDialog: React.FC = () => {
 									<span className="text-sm font-medium">Export Settings</span>
 								</div>
 
-								{/* Format Selection */}
-								<div className="space-y-2">
-									<Label htmlFor="image-format">Format</Label>
-									<Select
-										value={imageSettings.format}
-										onValueChange={handleFormatChange}
-										disabled={isExporting}
-									>
-										<SelectTrigger>
-											<SelectValue />
-										</SelectTrigger>
-										<SelectContent>
-											{FORMAT_OPTIONS.map((option) => (
-												<SelectItem key={option.value} value={option.value}>
-													<div className="flex flex-col">
-														<span>{option.label}</span>
-														<span className="text-xs text-muted-foreground">
-															{option.description}
-														</span>
-													</div>
-												</SelectItem>
-											))}
-										</SelectContent>
-									</Select>
-								</div>
-
-								{/* Size Multiplier - Hidden for SVG */}
+							{/* Format Selection */}
+							<div className="space-y-2">
+								<Label htmlFor="image-format">Format</Label>
+								<Select
+									value={imageSettings.format}
+									onValueChange={handleFormatChange}
+									disabled={isExporting}
+								>
+									<SelectTrigger id="image-format">
+										<SelectValue>
+											{FORMAT_OPTIONS.find(opt => opt.value === imageSettings.format)?.label}
+										</SelectValue>
+									</SelectTrigger>
+									<SelectContent>
+										{FORMAT_OPTIONS.map((option) => (
+											<SelectItem key={option.value} value={option.value}>
+												<div className="flex flex-col">
+													<span>{option.label}</span>
+													<span className="text-xs text-muted-foreground">
+														{option.description}
+													</span>
+												</div>
+											</SelectItem>
+										))}
+									</SelectContent>
+								</Select>
+							</div>								{/* Size Multiplier - Hidden for SVG */}
 								{imageSettings.format !== 'svg' && (
 									<div className="space-y-2">
 										<Label htmlFor="size-multiplier">Size Multiplier</Label>
@@ -261,14 +320,14 @@ export const ImageExportDialog: React.FC = () => {
 											Higher multipliers create larger, more detailed images
 										</p>
 										{exportDimensions && (
-											<div className="mt-2 p-2 bg-muted/30 rounded text-xs space-y-1">
-												<div className="flex justify-between">
-													<span className="text-muted-foreground">Output size:</span>
+											<div className="mt-2 p-3 bg-muted/30 rounded-lg text-xs space-y-2">
+												<div className="space-y-1">
+													<p className="text-xs font-medium text-muted-foreground">Output size:</p>
 													<span className="font-mono">{formatPixelDimensions(exportDimensions)}</span>
 												</div>
 												{estimatedSize && (
-													<div className="flex justify-between">
-														<span className="text-muted-foreground">Est. file size:</span>
+													<div className="space-y-1">
+														<p className="text-xs font-medium text-muted-foreground">Est. file size:</p>
 														<span className="font-mono">{estimatedSize}</span>
 													</div>
 												)}
@@ -301,22 +360,6 @@ export const ImageExportDialog: React.FC = () => {
 								{/* SVG-Specific Settings */}
 								{imageSettings.format === 'svg' && (
 									<>
-										{/* Text Rendering Mode */}
-										<div className="flex items-center justify-between">
-											<div className="space-y-0.5">
-												<Label htmlFor="svg-outlines">Text as Outlines</Label>
-												<p className="text-xs text-muted-foreground">
-													Convert text to vector paths
-												</p>
-											</div>
-											<Switch
-												id="svg-outlines"
-												checked={imageSettings.svgSettings?.textAsOutlines || false}
-												onCheckedChange={(checked) => handleSvgSettingChange('textAsOutlines', checked)}
-												disabled={isExporting}
-											/>
-										</div>
-
 										{/* Include Background */}
 										<div className="flex items-center justify-between">
 											<div className="space-y-0.5">
@@ -349,15 +392,57 @@ export const ImageExportDialog: React.FC = () => {
 											/>
 										</div>
 
-										{/* Estimated File Size for SVG */}
-										{estimatedSize && (
-											<div className="p-2 bg-muted/30 rounded text-xs space-y-1">
-												<div className="flex justify-between">
-													<span className="text-muted-foreground">Est. file size:</span>
+										{/* Estimated File Size & Font Status for SVG */}
+										<div className="p-3 bg-muted/30 rounded-lg text-xs space-y-2">
+											{estimatedSize && (
+												<div className="space-y-1">
+													<p className="text-xs font-medium text-muted-foreground">Est. file size:</p>
 													<span className="font-mono">{estimatedSize}</span>
 												</div>
+											)}
+											{/* Font Status */}
+											<div className="space-y-1">
+												<p className="text-xs font-medium text-muted-foreground">Font Used in Export:</p>
+												<div className="flex items-start gap-2 min-h-[16px]">
+													{svgFontStatus.isDetecting ? (
+														<>
+															<Loader2 className="w-3 h-3 mt-0.5 flex-shrink-0 animate-spin text-muted-foreground" />
+															<span className="text-muted-foreground leading-tight">Detecting font...</span>
+														</>
+													) : svgFontStatus.actualFont ? (
+														<>
+															{(() => {
+																const selectedFont = getFontById(selectedFontId);
+																const requestedFontName = selectedFont.name;
+																const message = selectedFontId === 'auto'
+																	? `Using ${svgFontStatus.actualFont}`
+																	: getFontFallbackMessage(requestedFontName, svgFontStatus.actualFont);
+
+																return svgFontStatus.isFallback ? (
+																	<>
+																		<AlertTriangle className="w-3 h-3 mt-0.5 flex-shrink-0 text-yellow-500" />
+																		<div className="flex-1 min-w-0">
+																			<span className="text-yellow-600 dark:text-yellow-500 leading-tight break-words">
+																				{message}
+																			</span>
+																		</div>
+																	</>
+																) : (
+																	<>
+																		<CheckCircle2 className="w-3 h-3 mt-0.5 flex-shrink-0 text-green-500" />
+																		<span className="text-muted-foreground leading-tight">{message}</span>
+																	</>
+																);
+															})()}
+														</>
+													) : (
+														<span className="text-muted-foreground leading-tight">
+															{getFontById(selectedFontId).description}
+														</span>
+													)}
+												</div>
 											</div>
-										)}
+										</div>
 									</>
 								)}
 
