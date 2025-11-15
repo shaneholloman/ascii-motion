@@ -11,6 +11,15 @@ import { create } from 'zustand';
 import type { Cell } from '../types';
 
 /**
+ * Session-persistent settings for the bezier tool
+ * Maintains user preferences across tool switches
+ */
+export interface BezierSessionSettings {
+  fillMode: 'constant' | 'palette' | 'autofill';
+  autofillPaletteId: string;
+}
+
+/**
  * Bezier Anchor Point
  * Represents a single point on the bezier path with optional handles
  */
@@ -104,6 +113,13 @@ interface BezierStore {
   
   /** Frame index where the shape was originally started (for frame-switch handling) */
   originalFrameIndex: number | null;
+  
+  // ========================================
+  // SESSION PERSISTENCE
+  // ========================================
+  
+  /** Session-persistent settings (maintains user preferences across tool switches) */
+  sessionSettings: BezierSessionSettings | null;
   
   // ========================================
   // ACTIONS - SHAPE CREATION
@@ -359,6 +375,9 @@ function generateAnchorId(): string {
  */
 export const useBezierStore = create<BezierStore>((set, get) => ({
   ...createDefaultState(),
+  
+  // Session persistence
+  sessionSettings: null, // No session settings stored initially
   
   // ========================================
   // SHAPE CREATION ACTIONS
@@ -907,11 +926,33 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
   // ========================================
   
   setFillMode: (mode: 'constant' | 'palette' | 'autofill') => {
-    set({ fillMode: mode });
+    set((state) => {
+      // Save to session settings for persistence
+      const sessionSettings: BezierSessionSettings = {
+        fillMode: mode,
+        autofillPaletteId: state.autofillPaletteId,
+      };
+      
+      return {
+        fillMode: mode,
+        sessionSettings
+      };
+    });
   },
   
   setAutofillPaletteId: (paletteId: string) => {
-    set({ autofillPaletteId: paletteId });
+    set((state) => {
+      // Save to session settings for persistence
+      const sessionSettings: BezierSessionSettings = {
+        fillMode: state.fillMode,
+        autofillPaletteId: paletteId,
+      };
+      
+      return {
+        autofillPaletteId: paletteId,
+        sessionSettings
+      };
+    });
   },
   
   // ========================================
@@ -930,18 +971,58 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
     const state = get();
     const cellsToCommit = state.previewCells || new Map();
     
-    // Reset state after commit
-    set(createDefaultState());
+    // Save current settings before reset
+    const currentSettings: BezierSessionSettings = {
+      fillMode: state.fillMode,
+      autofillPaletteId: state.autofillPaletteId,
+    };
+    
+    // Reset state after commit, but preserve fill settings
+    set({
+      ...createDefaultState(),
+      fillMode: currentSettings.fillMode,
+      autofillPaletteId: currentSettings.autofillPaletteId,
+      sessionSettings: currentSettings,
+    });
     
     return cellsToCommit;
   },
   
   cancelShape: () => {
-    set(createDefaultState());
+    const state = get();
+    
+    // Save current settings before reset
+    const currentSettings: BezierSessionSettings = {
+      fillMode: state.fillMode,
+      autofillPaletteId: state.autofillPaletteId,
+    };
+    
+    // Reset state but preserve fill settings
+    set({
+      ...createDefaultState(),
+      fillMode: currentSettings.fillMode,
+      autofillPaletteId: currentSettings.autofillPaletteId,
+      sessionSettings: currentSettings,
+    });
   },
   
   reset: () => {
-    set(createDefaultState());
+    const state = get();
+    
+    // Restore session settings if available, otherwise use defaults
+    const settingsToUse = state.sessionSettings ? {
+      fillMode: state.sessionSettings.fillMode,
+      autofillPaletteId: state.sessionSettings.autofillPaletteId,
+    } : {
+      fillMode: 'constant' as const,
+      autofillPaletteId: 'block',
+    };
+    
+    set({
+      ...createDefaultState(),
+      ...settingsToUse,
+      sessionSettings: state.sessionSettings,
+    });
   },
   
   setOriginalFrame: (frameIndex: number) => {
