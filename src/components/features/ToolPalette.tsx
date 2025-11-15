@@ -1,6 +1,7 @@
 import React from 'react';
 import { useToolStore } from '../../stores/toolStore';
 import { useGradientStore } from '../../stores/gradientStore';
+import { useBezierStore } from '../../stores/bezierStore';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useFlipUtilities } from '../../hooks/useFlipUtilities';
 import { Button } from '@/components/ui/button';
@@ -11,8 +12,11 @@ import { CollapsibleHeader } from '../common/CollapsibleHeader';
 import { PanelSeparator } from '../common/PanelSeparator';
 import { GradientIcon } from '../icons';
 import { BrushControls } from './BrushControls';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { AUTOFILL_PALETTES } from '../../constants/bezierAutofill';
 import { 
-  PenTool, 
+  PenTool,
+  PenLine,
   Eraser, 
   PaintBucket, 
   Pipette, 
@@ -60,6 +64,7 @@ const DashedRectangleIcon: React.FC<{ className?: string }> = ({ className }) =>
 // Organized tools by category
 const DRAWING_TOOLS: Array<{ id: Tool; name: string; icon: React.ReactNode; description: string }> = [
   { id: 'pencil', name: 'Pencil', icon: <PenTool className="w-3 h-3" />, description: 'Draw characters' },
+  { id: 'beziershape', name: 'Bezier Shape', icon: <PenLine className="w-3 h-3" />, description: 'Draw bezier vector shapes' },
   { id: 'eraser', name: 'Eraser', icon: <Eraser className="w-3 h-3" />, description: 'Remove characters' },
   { id: 'paintbucket', name: 'Fill', icon: <PaintBucket className="w-3 h-3" />, description: 'Fill connected areas' },
   { id: 'gradientfill', name: 'Gradient', icon: <GradientIcon className="w-3 h-3" />, description: 'Apply gradient fills' },
@@ -85,6 +90,7 @@ const UTILITY_TOOLS: Array<{ id: Tool; name: string; icon: React.ReactNode; desc
 export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
   const { activeTool, setActiveTool, rectangleFilled, setRectangleFilled, paintBucketContiguous, setPaintBucketContiguous, magicWandContiguous, setMagicWandContiguous, toolAffectsChar, toolAffectsColor, toolAffectsBgColor, eyedropperPicksChar, eyedropperPicksColor, eyedropperPicksBgColor, setToolAffectsChar, setToolAffectsColor, setToolAffectsBgColor, setEyedropperPicksChar, setEyedropperPicksColor, setEyedropperPicksBgColor, fillMatchChar, fillMatchColor, fillMatchBgColor, setFillMatchChar, setFillMatchColor, setFillMatchBgColor, magicMatchChar, magicMatchColor, magicMatchBgColor, setMagicMatchChar, setMagicMatchColor, setMagicMatchBgColor } = useToolStore();
   const { contiguous, matchChar, matchColor, matchBgColor, setContiguous, setMatchCriteria } = useGradientStore();
+  const { fillMode, autofillPaletteId, setFillMode, setAutofillPaletteId } = useBezierStore();
   const { altKeyDown, ctrlKeyDown } = useCanvasContext();
   const { flipHorizontal, flipVertical } = useFlipUtilities();
   const [showOptions, setShowOptions] = React.useState(true);
@@ -101,7 +107,7 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
   }
 
   // Tools that actually have configurable options. (Removed 'eraser' and 'text' per layout bug fix.)
-  const hasOptions = ['rectangle', 'ellipse', 'paintbucket', 'gradientfill', 'magicwand', 'pencil', 'eraser', 'eyedropper'].includes(effectiveTool);
+  const hasOptions = ['rectangle', 'ellipse', 'paintbucket', 'gradientfill', 'magicwand', 'pencil', 'eraser', 'eyedropper', 'beziershape'].includes(effectiveTool);
 
   // Get the current tool's icon
   const getCurrentToolIcon = () => {
@@ -379,6 +385,87 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
                           </TooltipContent>
                         </Tooltip>
                       </div>
+                    </div>
+                  )}
+                  
+                  {/* Bezier Shape Tool Options */}
+                  {effectiveTool === 'beziershape' && (
+                    <div className="space-y-3">
+                      {/* Fill Mode Selector */}
+                      <div className="space-y-2">
+                        <div className="text-xs text-muted-foreground">Fill Mode:</div>
+                        <div className="flex gap-1">
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={fillMode === 'constant' ? "default" : "outline"}
+                                size="sm"
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setFillMode('constant')}
+                              >
+                                Constant
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Fill with current character</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={fillMode === 'palette' ? "default" : "outline"}
+                                size="sm"
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setFillMode('palette')}
+                              >
+                                Palette
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Fill with palette characters</p>
+                            </TooltipContent>
+                          </Tooltip>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant={fillMode === 'autofill' ? "default" : "outline"}
+                                size="sm"
+                                className="flex-1 h-7 text-xs"
+                                onClick={() => setFillMode('autofill')}
+                              >
+                                Autofill
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Intelligent character selection</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </div>
+                      </div>
+                      
+                      {/* Autofill Palette Selector - Only shown when autofill mode is active */}
+                      {fillMode === 'autofill' && (
+                        <div className="space-y-2">
+                          <Label htmlFor="autofill-palette" className="text-xs text-muted-foreground">
+                            Autofill Palette:
+                          </Label>
+                          <Select value={autofillPaletteId} onValueChange={setAutofillPaletteId}>
+                            <SelectTrigger id="autofill-palette" className="w-full h-8 text-xs">
+                              <SelectValue placeholder="Select palette..." />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {AUTOFILL_PALETTES.map((palette) => (
+                                <SelectItem key={palette.id} value={palette.id} className="text-xs">
+                                  <div className="flex flex-col">
+                                    <span className="font-medium">{palette.name}</span>
+                                    <span className="text-muted-foreground text-[10px]">{palette.description}</span>
+                                  </div>
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                      )}
                     </div>
                   )}
                   

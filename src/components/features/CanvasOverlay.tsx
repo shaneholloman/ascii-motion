@@ -7,6 +7,7 @@ import { useCanvasStore } from '../../stores/canvasStore';
 import { useTheme } from '../../contexts/ThemeContext';
 import { useCanvasState } from '../../hooks/useCanvasState';
 import { InteractiveGradientOverlay } from './InteractiveGradientOverlay';
+import { InteractiveBezierOverlay } from './InteractiveBezierOverlay';
 
 type GradientPropertyKey = 'character' | 'textColor' | 'backgroundColor';
 
@@ -861,6 +862,7 @@ export const CanvasOverlay: React.FC = () => {
         }}
       />
       <InteractiveGradientOverlay />
+      <InteractiveBezierOverlay />
     </>
   );
 };

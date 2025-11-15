@@ -559,13 +559,14 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
     });
   },
   
-  updateDrag: (mousePos: { x: number; y: number }, _shiftKey: boolean) => {
+  updateDrag: (gridPos: { x: number; y: number }, _shiftKey: boolean) => {
     const state = get();
     
     if (!state.dragStartMousePos) return;
     
-    const deltaX = mousePos.x - state.dragStartMousePos.x;
-    const deltaY = mousePos.y - state.dragStartMousePos.y;
+    // Calculate delta in grid coordinates
+    const deltaX = gridPos.x - state.dragStartMousePos.x;
+    const deltaY = gridPos.y - state.dragStartMousePos.y;
     
     // TODO: Implement shift-key constraints (snap to 45 degrees, etc.) using _shiftKey parameter
     // For now, just apply raw delta
@@ -581,7 +582,7 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
         get().updatePointPosition(state.draggingPointId, newPos);
         
         // Update drag start for next frame
-        set({ dragStartMousePos: { ...mousePos } });
+        set({ dragStartMousePos: { ...gridPos } });
       }
     } else if (state.isDraggingHandle && state.draggingHandleId) {
       const { pointId, type } = state.draggingHandleId;
@@ -599,7 +600,7 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
           get().updateHandle(pointId, type, newHandle);
           
           // Update drag start for next frame
-          set({ dragStartMousePos: { ...mousePos } });
+          set({ dragStartMousePos: { ...gridPos } });
         }
       }
     } else if (state.isDraggingShape && state.dragStartShapePos) {
@@ -614,7 +615,7 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
       set({ anchorPoints: newPoints });
       
       // Update drag start for next frame
-      set({ dragStartMousePos: { ...mousePos } });
+      set({ dragStartMousePos: { ...gridPos } });
     }
   },
   

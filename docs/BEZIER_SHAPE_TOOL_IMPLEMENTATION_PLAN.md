@@ -1175,46 +1175,46 @@ if (activeTool === 'beziershape') {
 ## 🏗️ Implementation Checklist
 
 ### Phase 1: Core Infrastructure
-- [ ] Add `'beziershape'` to `Tool` type in `src/types/index.ts`
-- [ ] Add hotkey mapping in `src/constants/hotkeys.ts` (change pencil to 'b', add beziershape as 'p')
-- [ ] Create `src/stores/bezierStore.ts` with full state and actions
-- [ ] Create autofill palette architecture:
-  - [ ] Create `src/constants/bezierAutofill/types.ts` (type definitions)
-  - [ ] Create `src/constants/bezierAutofill/blockCharacters.ts` (block palette)
-  - [ ] Create `src/constants/bezierAutofill/ansiCharacters.ts` (ANSI palette)
-  - [ ] Create `src/constants/bezierAutofill/index.ts` (palette registry)
-- [ ] Create `src/utils/bezierPathUtils.ts` with path construction utilities
-- [ ] Create `src/utils/bezierAutofillUtils.ts` with region detection logic
+- [x] Add `'beziershape'` to `Tool` type in `src/types/index.ts`
+- [x] Add hotkey mapping in `src/constants/hotkeys.ts` (change pencil to 'b', add beziershape as 'p')
+- [x] Create `src/stores/bezierStore.ts` with full state and actions
+- [x] Create autofill palette architecture:
+  - [x] Create `src/constants/bezierAutofill/types.ts` (type definitions)
+  - [x] Create `src/constants/bezierAutofill/blockCharacters.ts` (block palette)
+  - [x] Create `src/constants/bezierAutofill/ansiCharacters.ts` (ANSI palette)
+  - [x] Create `src/constants/bezierAutofill/index.ts` (palette registry)
+- [x] Create `src/utils/bezierPathUtils.ts` with path construction utilities
+- [x] Create `src/utils/bezierAutofillUtils.ts` with region detection logic
 
 ### Phase 2: Bezier Math & Rendering
-- [ ] Implement bezier curve rendering in `createBezierPath()`
-- [ ] Implement bounding box calculation in `getBezierBounds()`
-- [ ] Implement point-to-pixel coordinate conversion
+- [x] Implement bezier curve rendering in `createBezierPath()`
+- [x] Implement bounding box calculation in `getBezierBounds()`
+- [x] Implement point-to-pixel coordinate conversion
 - [ ] Test bezier curve accuracy with various handle configurations
 
 ### Phase 3: Fill Mode Implementations
-- [ ] Implement Constant Fill mode (simplest - good starting point)
-- [ ] Implement Palette Fill mode with 5x5 subsampling
-- [ ] Implement Autofill mode with 9-region detection
+- [x] Implement Constant Fill mode (simplest - good starting point)
+- [x] Implement Palette Fill mode with 5x5 subsampling
+- [x] Implement Autofill mode with 9-region detection
 - [ ] Test performance on large canvases (200x100 cells)
 - [ ] Optimize if needed (reduce subsample size, use bounding box culling)
 
 ### Phase 4: Interactive Overlay
-- [ ] Create `src/components/features/InteractiveBezierOverlay.tsx`
-- [ ] Implement anchor point rendering and hit testing
-- [ ] Implement handle rendering and hit testing
+- [x] Create `src/components/features/InteractiveBezierOverlay.tsx`
+- [x] Implement anchor point rendering and hit testing
+- [x] Implement handle rendering and hit testing
 - [ ] Implement shape dragging (click inside + drag)
 - [ ] Implement multi-select (Shift+Click multiple points)
-- [ ] Implement Alt+Click handle toggle
-- [ ] Implement Alt+Drag handle symmetry breaking
+- [x] Implement Alt+Click handle toggle
+- [x] Implement Alt+Drag handle symmetry breaking
 - [ ] Implement Shift+Drag handle constraining (horizontal/vertical)
 - [ ] Implement preview character rendering at 95% opacity
 
 ### Phase 5: Tool Integration
 - [ ] Create `src/components/tools/BezierShapeTool.tsx`
 - [ ] Create `src/components/features/BezierToolOptions.tsx`
-- [ ] Integrate into `ToolPalette.tsx` (Drawing Tools category)
-- [ ] Integrate into `ToolManager.tsx` or equivalent
+- [x] Integrate into `ToolPalette.tsx` (Drawing Tools category)
+- [x] Integrate into `ToolManager.tsx` or equivalent (overlay imported in CanvasOverlay.tsx)
 - [ ] Add to `useKeyboardShortcuts.ts` for hotkey support
 - [ ] Update `ToolStatusManager.tsx` for status messages
 
