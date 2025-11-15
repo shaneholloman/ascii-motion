@@ -21,6 +21,7 @@ import {
   FlipVerticalToolStatus,
   AsciiTypeToolStatus,
   AsciiBoxToolStatus,
+  BezierShapeToolStatus,
 } from '../tools';
 import { MouseCoordinates } from '../common/MouseCoordinates';
 
@@ -84,6 +85,8 @@ export const ToolStatusManager: React.FC = () => {
         return <TextToolStatus />;
       case 'gradientfill':
         return <GradientFillToolStatus />;
+      case 'beziershape':
+        return <BezierShapeToolStatus />;
       case 'asciitype':
         return <AsciiTypeToolStatus />;
       case 'asciibox':

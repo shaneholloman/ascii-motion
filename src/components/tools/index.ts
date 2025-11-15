@@ -13,6 +13,7 @@ export { FlipHorizontalTool, FlipHorizontalToolStatus } from './FlipHorizontalTo
 export { FlipVerticalTool, FlipVerticalToolStatus } from './FlipVerticalTool';
 export { AsciiTypeTool, AsciiTypeToolStatus } from './AsciiTypeTool';
 export { AsciiBoxTool, AsciiBoxToolStatus } from './AsciiBoxTool';
+export { BezierShapeTool, BezierShapeToolStatus } from './BezierShapeTool';
 
 // Tool Types
 export type ToolComponent = 
