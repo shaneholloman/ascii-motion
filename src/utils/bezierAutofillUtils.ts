@@ -85,22 +85,25 @@ export function detectCellRegions(
 ): Set<RegionName> {
   const filledRegions = new Set<RegionName>();
   
-  // Calculate cell boundaries in grid coordinates
-  const cellLeft = cellX;
-  const cellTop = cellY;
+  // In our coordinate system, grid coordinate n represents the center of cell n.
+  // To sample regions within the cell, we offset by fractions from the center.
+  // For a cell at position cellX:
+  // - cellX - 1/3 is the left third
+  // - cellX is the center
+  // - cellX + 1/3 is the right third
   
   // Define 9 region centers (in grid coordinates)
-  // Each region is 1/3 of the cell width/height
+  // Each region is 1/3 of the cell width/height offset from cell center
   const regions: Array<{ name: RegionName; x: number; y: number }> = [
-    { name: 'TL', x: cellLeft + 1/6, y: cellTop + 1/6 },      // Top-left
-    { name: 'TC', x: cellLeft + 3/6, y: cellTop + 1/6 },      // Top-center
-    { name: 'TR', x: cellLeft + 5/6, y: cellTop + 1/6 },      // Top-right
-    { name: 'ML', x: cellLeft + 1/6, y: cellTop + 3/6 },      // Middle-left
-    { name: 'MC', x: cellLeft + 3/6, y: cellTop + 3/6 },      // Middle-center
-    { name: 'MR', x: cellLeft + 5/6, y: cellTop + 3/6 },      // Middle-right
-    { name: 'BL', x: cellLeft + 1/6, y: cellTop + 5/6 },      // Bottom-left
-    { name: 'BC', x: cellLeft + 3/6, y: cellTop + 5/6 },      // Bottom-center
-    { name: 'BR', x: cellLeft + 5/6, y: cellTop + 5/6 },      // Bottom-right
+    { name: 'TL', x: cellX - 1/3, y: cellY - 1/3 },      // Top-left
+    { name: 'TC', x: cellX,      y: cellY - 1/3 },       // Top-center
+    { name: 'TR', x: cellX + 1/3, y: cellY - 1/3 },      // Top-right
+    { name: 'ML', x: cellX - 1/3, y: cellY      },       // Middle-left
+    { name: 'MC', x: cellX,      y: cellY       },       // Middle-center
+    { name: 'MR', x: cellX + 1/3, y: cellY      },       // Middle-right
+    { name: 'BL', x: cellX - 1/3, y: cellY + 1/3 },      // Bottom-left
+    { name: 'BC', x: cellX,      y: cellY + 1/3 },       // Bottom-center
+    { name: 'BR', x: cellX + 1/3, y: cellY + 1/3 },      // Bottom-right
   ];
   
   // Test each region center
@@ -172,11 +175,18 @@ export function calculateCellOverlap(
   const SUBSAMPLE_SIZE = 5;
   let overlapCount = 0;
   
+  // Sample across the cell, centered around cellX, cellY
+  // Grid coordinate cellX represents the cell center, so we sample
+  // from (cellX - 0.5) to (cellX + 0.5)
   for (let sy = 0; sy < SUBSAMPLE_SIZE; sy++) {
     for (let sx = 0; sx < SUBSAMPLE_SIZE; sx++) {
       // Sample at regular intervals across the cell
-      const sampleX = cellX + (sx + 0.5) / SUBSAMPLE_SIZE;
-      const sampleY = cellY + (sy + 0.5) / SUBSAMPLE_SIZE;
+      // Map from [0, SUBSAMPLE_SIZE-1] to [-0.4, 0.4] (staying within cell bounds)
+      const offsetX = (sx / (SUBSAMPLE_SIZE - 1) - 0.5) * 0.8;
+      const offsetY = (sy / (SUBSAMPLE_SIZE - 1) - 0.5) * 0.8;
+      
+      const sampleX = cellX + offsetX;
+      const sampleY = cellY + offsetY;
       
       if (isPointInPath(sampleX, sampleY, path, ctx, cellWidth, cellHeight, zoom, panOffset)) {
         overlapCount++;
@@ -193,6 +203,9 @@ export function calculateCellOverlap(
  * 
  * Tests the center of the cell to determine if it's inside the bezier path.
  * This is the fastest method and appropriate for simple fills.
+ * 
+ * Note: In our coordinate system, grid coordinate n represents the center
+ * of cell n. So to test cell 10, we test grid coordinate 10, not 10.5.
  * 
  * @param cellX - Cell X coordinate (integer)
  * @param cellY - Cell Y coordinate (integer)
@@ -214,11 +227,8 @@ export function isCellInside(
   zoom: number,
   panOffset: { x: number; y: number }
 ): boolean {
-  // Test center of cell
-  const centerX = cellX + 0.5;
-  const centerY = cellY + 0.5;
-  
-  return isPointInPath(centerX, centerY, path, ctx, cellWidth, cellHeight, zoom, panOffset);
+  // Test center of cell (grid coordinate = cell index in our coordinate system)
+  return isPointInPath(cellX, cellY, path, ctx, cellWidth, cellHeight, zoom, panOffset);
 }
 
 /**

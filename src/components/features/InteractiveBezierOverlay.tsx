@@ -12,11 +12,14 @@ import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useToolStore } from '../../stores/toolStore';
 import { useCanvasStore } from '../../stores/canvasStore';
 import { useCharacterPaletteStore } from '../../stores/characterPaletteStore';
+import { useAnimationStore } from '../../stores/animationStore';
 import { generateBezierPreview } from '../../utils/bezierFillUtils';
+import type { CanvasHistoryAction } from '../../types';
 
 export const InteractiveBezierOverlay: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
-  const { activeTool } = useToolStore();
+  const svgOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const { activeTool, pushToHistory } = useToolStore();
   const { cellWidth, cellHeight, zoom, panOffset } = useCanvasContext();
   
   // Track if we just placed a new point and should be creating handles on drag
@@ -44,6 +47,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
     isDraggingShape,
     fillMode,
     autofillPaletteId,
+    previewCells,
     addAnchorPoint,
     closeShape,
     togglePointHandles,
@@ -58,14 +62,71 @@ export const InteractiveBezierOverlay: React.FC = () => {
     insertPointOnSegment,
     removePoint,
     updatePreview,
+    commitShape,
+    cancelShape,
   } = useBezierStore();
 
-  const { width, height } = useCanvasStore();
+  const { width, height, cells, setCanvasData } = useCanvasStore();
   const { selectedChar, selectedColor, selectedBgColor } = useToolStore();
   const { activePalette } = useCharacterPaletteStore();
+  const { currentFrameIndex } = useAnimationStore();
 
   const effectiveCellWidth = cellWidth * zoom;
   const effectiveCellHeight = cellHeight * zoom;
+
+  /**
+   * Commit the bezier shape to the canvas
+   */
+  const handleCommit = useCallback(() => {
+    if (!isClosed || !previewCells || previewCells.size === 0) {
+      console.warn('[Bezier] Cannot commit: shape not closed or no preview data');
+      return;
+    }
+
+    try {
+      // Store current canvas state for undo
+      const originalCells = new Map(cells);
+
+      // Get cells to commit from store
+      const cellsToCommit = commitShape();
+
+      // Apply to canvas
+      const newCells = new Map(cells);
+      cellsToCommit.forEach((cell, key) => {
+        if (cell.char === ' ' && cell.color === '#FFFFFF' && cell.bgColor === 'transparent') {
+          // Remove empty cells to save memory
+          newCells.delete(key);
+        } else {
+          newCells.set(key, { ...cell });
+        }
+      });
+
+      setCanvasData(newCells);
+
+      // Add to history for undo/redo
+      const historyAction: CanvasHistoryAction = {
+        type: 'canvas_edit',
+        timestamp: Date.now(),
+        description: `Apply bezier shape (${cellsToCommit.size} cells)`,
+        data: {
+          previousCanvasData: originalCells,
+          newCanvasData: newCells,
+          frameIndex: currentFrameIndex,
+        },
+      };
+
+      pushToHistory(historyAction);
+    } catch (error) {
+      console.error('[Bezier] Error committing shape:', error);
+    }
+  }, [isClosed, previewCells, cells, currentFrameIndex, commitShape, setCanvasData, pushToHistory]);
+
+  /**
+   * Cancel the bezier shape without committing
+   */
+  const handleCancel = useCallback(() => {
+    cancelShape();
+  }, [cancelShape]);
 
   /**
    * Track Cmd/Meta key state for add/delete point functionality
@@ -100,6 +161,32 @@ export const InteractiveBezierOverlay: React.FC = () => {
       window.removeEventListener('blur', handleBlur);
     };
   }, []);
+
+  /**
+   * Handle Enter (commit) and Escape (cancel) keyboard shortcuts
+   */
+  React.useEffect(() => {
+    // Only handle keys when bezier tool is active and shape is closed
+    if (activeTool !== 'beziershape' || !isClosed) return;
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Ignore if user is typing in an input
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
+        return;
+      }
+
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        handleCommit();
+      } else if (e.key === 'Escape') {
+        e.preventDefault();
+        handleCancel();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [activeTool, isClosed, handleCommit, handleCancel]);
 
   /**
    * Generate and update preview whenever shape changes
@@ -377,8 +464,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
       if (!overlayRef.current) return;
 
       const rect = overlayRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      // Adjust for both container position and SVG transform offset
+      const mouseX = e.clientX - rect.left - svgOffsetRef.current.x;
+      const mouseY = e.clientY - rect.top - svgOffsetRef.current.y;
 
       const hit = hitTest(mouseX, mouseY);
 
@@ -508,8 +596,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
       if (!overlayRef.current) return;
 
       const rect = overlayRef.current.getBoundingClientRect();
-      const mouseX = e.clientX - rect.left;
-      const mouseY = e.clientY - rect.top;
+      // Adjust for both container position and SVG transform offset
+      const mouseX = e.clientX - rect.left - svgOffsetRef.current.x;
+      const mouseY = e.clientY - rect.top - svgOffsetRef.current.y;
       const gridPos = pixelToGrid(mouseX, mouseY);
 
       // Check if Alt+clicking a point without handles - decide between click (toggle with smart handles) vs drag (zero-length handles)
@@ -874,19 +963,87 @@ export const InteractiveBezierOverlay: React.FC = () => {
     }
   }
 
+  // Calculate bounds to expand the interactive area for off-screen elements
+  let containerStyle: React.CSSProperties = { 
+    cursor, 
+    zIndex: 20,
+    position: 'absolute',
+    inset: 0
+  };
+
+  // Reset offset (will be updated if we expand container)
+  svgOffsetRef.current = { x: 0, y: 0 };
+
+  if (anchorPoints.length > 0) {
+    // Find bounds of all points and handles in pixel space
+    let minX = 0, minY = 0, maxX = 0, maxY = 0;
+    
+    anchorPoints.forEach(point => {
+      const pixel = gridToPixel(point.position.x, point.position.y);
+      minX = Math.min(minX, pixel.x);
+      minY = Math.min(minY, pixel.y);
+      maxX = Math.max(maxX, pixel.x);
+      maxY = Math.max(maxY, pixel.y);
+      
+      // Also consider handles
+      if (point.hasHandles) {
+        if (point.handleIn) {
+          const handleX = pixel.x + point.handleIn.x * effectiveCellWidth;
+          const handleY = pixel.y + point.handleIn.y * effectiveCellHeight;
+          minX = Math.min(minX, handleX);
+          minY = Math.min(minY, handleY);
+          maxX = Math.max(maxX, handleX);
+          maxY = Math.max(maxY, handleY);
+        }
+        if (point.handleOut) {
+          const handleX = pixel.x + point.handleOut.x * effectiveCellWidth;
+          const handleY = pixel.y + point.handleOut.y * effectiveCellHeight;
+          minX = Math.min(minX, handleX);
+          minY = Math.min(minY, handleY);
+          maxX = Math.max(maxX, handleX);
+          maxY = Math.max(maxY, handleY);
+        }
+      }
+    });
+    
+    // Add padding for handles and stroke width
+    const padding = 50;
+    minX = Math.min(minX - padding, 0);
+    minY = Math.min(minY - padding, 0);
+    
+    // Expand container to cover all points
+    if (minX < 0 || minY < 0) {
+      containerStyle = {
+        ...containerStyle,
+        left: minX,
+        top: minY,
+        right: -Math.max(maxX + padding - (overlayRef.current?.offsetWidth || 0), 0),
+        bottom: -Math.max(maxY + padding - (overlayRef.current?.offsetHeight || 0), 0),
+      };
+      
+      // Store offset for mouse coordinate adjustment
+      svgOffsetRef.current = { x: -minX, y: -minY };
+    }
+  }
+
   return (
     <div
       ref={overlayRef}
-      className="absolute inset-0 pointer-events-auto"
+      className="pointer-events-auto"
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
-      style={{ cursor, zIndex: 20 }}
+      style={containerStyle}
     >
-      <svg className="absolute inset-0 w-full h-full" style={{ pointerEvents: 'none' }}>
-        {pathElement}
-        {controlsElement}
+      <svg 
+        className="absolute inset-0 w-full h-full"
+        style={{ pointerEvents: 'none', overflow: 'visible' }}
+      >
+        <g transform={`translate(${svgOffsetRef.current.x}, ${svgOffsetRef.current.y})`}>
+          {pathElement}
+          {controlsElement}
+        </g>
       </svg>
     </div>
   );
