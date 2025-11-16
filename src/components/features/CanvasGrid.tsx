@@ -7,6 +7,7 @@ import { useCanvasState } from '../../hooks/useCanvasState';
 import { useCanvasMouseHandlers } from '../../hooks/useCanvasMouseHandlers';
 import { useCanvasRenderer } from '../../hooks/useCanvasRenderer';
 import { useToolBehavior } from '../../hooks/useToolBehavior';
+import { useBezierStore } from '../../stores/bezierStore';
 import { useHoverPreview } from '../../hooks/useHoverPreview';
 import { ToolManager } from './ToolManager';
 import { ToolStatusManager } from './ToolStatusManager';
@@ -21,7 +22,7 @@ interface CanvasGridProps {
 
 export const CanvasGrid: React.FC<CanvasGridProps> = ({ className = '' }) => {
   // Use our new context and state management
-  const { canvasRef, setMouseButtonDown, setShiftKeyDown, setAltKeyDown, altKeyDown, setCtrlKeyDown, ctrlKeyDown } = useCanvasContext();
+  const { canvasRef, setMouseButtonDown, setShiftKeyDown, setAltKeyDown, altKeyDown, setCtrlKeyDown, ctrlKeyDown, cellWidth, cellHeight, zoom, panOffset } = useCanvasContext();
   
   // Get active tool and tool behavior
   const { activeTool, textToolState, isPlaybackMode } = useToolStore();
@@ -389,6 +390,29 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({ className = '' }) => {
     }
   }, [activeTool, moveState, commitMove, setSelectionMode, setMouseButtonDown, setPendingSelectionStart, setMoveState]);
 
+  // Fallback handler: if Bezier overlay fails to capture the initial click after commit/cancel,
+  // allow starting a new shape directly from the base canvas. This ensures seamless cycles.
+  const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    if (activeTool === 'beziershape') {
+      const { anchorPoints, isDrawing, addAnchorPoint } = useBezierStore.getState();
+      if (!isDrawing && anchorPoints.length === 0 && canvasRef.current) {
+        const rect = canvasRef.current.getBoundingClientRect();
+        const pixelX = e.clientX - rect.left;
+        const pixelY = e.clientY - rect.top;
+  const effectiveCellWidth = cellWidth * zoom;
+  const effectiveCellHeight = cellHeight * zoom;
+  const pan = panOffset;
+        const gridX = (pixelX - pan.x - effectiveCellWidth / 2) / effectiveCellWidth;
+        const gridY = (pixelY - pan.y - effectiveCellHeight / 2) / effectiveCellHeight;
+        addAnchorPoint(gridX, gridY, false);
+        // Prevent default canvas handler so we don't trigger unrelated logic
+        return;
+      }
+    }
+    // Delegate to existing canvas mouse handlers for all other cases
+    handleMouseDown(e);
+  }, [activeTool, handleMouseDown]);
+
   return (
     <div className={`canvas-grid-container ${className} h-full flex flex-col relative`}>
       {/* Tool Manager - handles tool-specific behavior */}
@@ -404,7 +428,7 @@ export const CanvasGrid: React.FC<CanvasGridProps> = ({ className = '' }) => {
         <canvas
           ref={canvasRef}
           className={`canvas-grid border border-border ${getToolCursor(effectiveTool)}`}
-          onMouseDown={handleMouseDown}
+          onMouseDown={handleCanvasMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
           onMouseLeave={handleMouseLeave}

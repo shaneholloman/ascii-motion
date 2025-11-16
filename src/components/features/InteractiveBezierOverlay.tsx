@@ -116,6 +116,14 @@ export const InteractiveBezierOverlay: React.FC = () => {
       };
 
       pushToHistory(historyAction);
+
+      // Reset local component state so user can immediately start a new shape
+      setPlacingPointId(null);
+      setPlacementStartPos(null);
+      setAltClickPointId(null);
+      setAltClickStartPos(null);
+      setCmdKeyPressed(false);
+      setHoverState(null);
     } catch (error) {
       console.error('[Bezier] Error committing shape:', error);
     }
@@ -126,7 +134,47 @@ export const InteractiveBezierOverlay: React.FC = () => {
    */
   const handleCancel = useCallback(() => {
     cancelShape();
+    
+    // Reset local component state so user can immediately start a new shape
+    setPlacingPointId(null);
+    setPlacementStartPos(null);
+    setAltClickPointId(null);
+    setAltClickStartPos(null);
+    setCmdKeyPressed(false);
+    setHoverState(null);
   }, [cancelShape]);
+
+  /**
+   * Ensure local interaction state is cleared any time the bezier store
+   * returns to an idle state (no anchor points and not actively editing).
+   * This covers commit/cancel flows triggered outside this component and
+   * prevents requiring a manual tool reselect to recover.
+   */
+  useEffect(() => {
+    const storeIdle =
+      anchorPoints.length === 0 &&
+      !isDrawing &&
+      !isDraggingPoint &&
+      !isDraggingHandle &&
+      !isDraggingShape;
+
+    if (!storeIdle) {
+      return;
+    }
+
+    setPlacingPointId(null);
+    setPlacementStartPos(null);
+    setAltClickPointId(null);
+    setAltClickStartPos(null);
+    setCmdKeyPressed(false);
+    setHoverState(null);
+  }, [
+    anchorPoints.length,
+    isDrawing,
+    isDraggingPoint,
+    isDraggingHandle,
+    isDraggingShape,
+  ]);
 
   /**
    * Track Cmd/Meta key state for add/delete point functionality
@@ -577,7 +625,6 @@ export const InteractiveBezierOverlay: React.FC = () => {
       addAnchorPoint,
       closeShape,
       togglePointHandles,
-      enableHandlesForDrag,
       breakHandleSymmetry,
       selectPoint,
       clearSelection,
