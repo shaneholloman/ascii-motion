@@ -1300,6 +1300,171 @@ if (activeTool === 'beziershape') {
 
 ---
 
+## 🐛 Post-Implementation Lessons & Bug Fixes
+
+### Issue: Tool Not Resetting After Commit/Cancel (Fixed 2025-11-15)
+
+**Symptom**: After committing or canceling a bezier shape, the cursor remained as crosshair but clicks did not create new anchor points. The tool appeared "stuck" and required reselection to function again.
+
+**Root Cause Analysis**:
+The issue stemmed from three distinct problems that compounded into a complete interaction failure:
+
+1. **Missing Tool Metadata**: The `beziershape` tool was not registered in the tool behavior system (`useToolBehavior.ts`), causing it to:
+   - Return `cursor-default` instead of `cursor-crosshair` (visual confusion)
+   - Not be included in `isInteractiveTool` or `isDrawingTool` arrays (potential logic gaps)
+   - Lack a proper display name in tooling contexts
+
+2. **Incomplete Local State Reset**: The `InteractiveBezierOverlay` component maintained several pieces of local state for interaction tracking (`placingPointId`, `placementStartPos`, `altClickPointId`, etc.). The `handleCommit()` and `handleCancel()` callbacks cleared the store state but did not reset this local component state, leaving the overlay in a "limbo" state where it thought it was still mid-interaction.
+
+3. **No Idle-State Recovery Mechanism**: If the store was reset externally (e.g., via a keyboard shortcut or programmatic reset), the component had no mechanism to detect and recover from this state desynchronization. The overlay would remain mounted but unresponsive.
+
+**The Fix (Four-Part Solution)**:
+
+**Part 1: Register Tool Metadata** (`src/hooks/useToolBehavior.ts`)
+```typescript
+// Added to getToolCursor():
+case 'beziershape':
+  return 'cursor-crosshair'; // Precise point placement for Bézier shape tool
+
+// Added to getToolDisplayName():
+case 'beziershape':
+  return 'Bezier Shape';
+
+// Added to isInteractiveTool():
+return ['select', 'lasso', 'magicwand', 'rectangle', 'ellipse', 'beziershape', 'text', 'asciitype'].includes(tool);
+
+// Added to isDrawingTool():
+return ['pencil', 'eraser', 'paintbucket', 'rectangle', 'ellipse', 'beziershape', 'text', 'asciitype'].includes(tool);
+```
+
+**Part 2: Reset Local State in Commit/Cancel** (`src/components/features/InteractiveBezierOverlay.tsx`)
+```typescript
+const handleCommit = useCallback(() => {
+  // ... existing commit logic ...
+  
+  // NEW: Reset local component state so user can immediately start a new shape
+  setPlacingPointId(null);
+  setPlacementStartPos(null);
+  setAltClickPointId(null);
+  setAltClickStartPos(null);
+  setCmdKeyPressed(false);
+  setHoverState(null);
+}, [/* deps */]);
+
+const handleCancel = useCallback(() => {
+  cancelShape();
+  
+  // NEW: Reset local component state so user can immediately start a new shape
+  setPlacingPointId(null);
+  setPlacementStartPos(null);
+  setAltClickPointId(null);
+  setAltClickStartPos(null);
+  setCmdKeyPressed(false);
+  setHoverState(null);
+}, [cancelShape]);
+```
+
+**Part 3: Add Idle-State Synchronization Effect** (`src/components/features/InteractiveBezierOverlay.tsx`)
+```typescript
+/**
+ * Ensure local interaction state is cleared any time the bezier store
+ * returns to an idle state (no anchor points and not actively editing).
+ * This covers commit/cancel flows triggered outside this component and
+ * prevents requiring a manual tool reselect to recover.
+ */
+useEffect(() => {
+  const storeIdle =
+    anchorPoints.length === 0 &&
+    !isDrawing &&
+    !isDraggingPoint &&
+    !isDraggingHandle &&
+    !isDraggingShape;
+
+  if (!storeIdle) {
+    return;
+  }
+
+  setPlacingPointId(null);
+  setPlacementStartPos(null);
+  setAltClickPointId(null);
+  setAltClickStartPos(null);
+  setCmdKeyPressed(false);
+  setHoverState(null);
+}, [
+  anchorPoints.length,
+  isDrawing,
+  isDraggingPoint,
+  isDraggingHandle,
+  isDraggingShape,
+]);
+```
+
+**Part 4: Canvas-Level Fallback** (`src/components/features/CanvasGrid.tsx`)
+```typescript
+// Fallback handler: if Bezier overlay fails to capture the initial click after commit/cancel,
+// allow starting a new shape directly from the base canvas. This ensures seamless cycles.
+const handleCanvasMouseDown = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+  if (activeTool === 'beziershape') {
+    const { anchorPoints, isDrawing, addAnchorPoint } = useBezierStore.getState();
+    if (!isDrawing && anchorPoints.length === 0 && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const pixelX = e.clientX - rect.left;
+      const pixelY = e.clientY - rect.top;
+      const effectiveCellWidth = cellWidth * zoom;
+      const effectiveCellHeight = cellHeight * zoom;
+      const pan = panOffset;
+      const gridX = (pixelX - pan.x - effectiveCellWidth / 2) / effectiveCellWidth;
+      const gridY = (pixelY - pan.y - effectiveCellHeight / 2) / effectiveCellHeight;
+      addAnchorPoint(gridX, gridY, false);
+      // Prevent default canvas handler so we don't trigger unrelated logic
+      return;
+    }
+  }
+  // Delegate to existing canvas mouse handlers for all other cases
+  handleMouseDown(e);
+}, [activeTool, handleMouseDown, cellWidth, cellHeight, zoom, panOffset, canvasRef]);
+
+// Then wire it to the canvas:
+<canvas
+  ref={canvasRef}
+  onMouseDown={handleCanvasMouseDown}  // Changed from handleMouseDown
+  // ... other props
+/>
+```
+
+**Key Learnings**:
+
+1. **Tool Metadata Registration Is Critical**: New tools must be explicitly registered in `useToolBehavior.ts` to ensure proper cursor behavior and integration with existing tool classification logic. Missing this registration can cause subtle UI bugs that are difficult to diagnose.
+
+2. **Component Local State vs Store State**: When a component manages both Zustand store state AND local React state (for UI-specific tracking), commit/cancel operations MUST reset BOTH. The local state is often forgotten because it's less visible than the store.
+
+3. **Defensive State Synchronization**: Components that depend on store state should include a "watchdog" effect that detects desynchronization and automatically recovers. This is especially important for interactive overlays that can be affected by external state changes (keyboard shortcuts, programmatic resets, etc.).
+
+4. **Layered Defense Strategy**: The four-part fix demonstrates a robust pattern:
+   - Fix the metadata (proper tool registration)
+   - Fix explicit transitions (commit/cancel callbacks)
+   - Fix implicit transitions (idle-state effect)
+   - Add safety net (canvas-level fallback)
+
+5. **User Experience Impact**: Even though the store was correctly resetting, the poor cursor feedback (default arrow instead of crosshair) and unresponsive overlay created the perception that the tool was "broken". Visual feedback (cursor) is as important as functional correctness.
+
+**Testing Checklist for Similar Issues**:
+- [ ] Is the tool registered in `useToolBehavior.ts`? (cursor, display name, classifications)
+- [ ] Do commit/cancel operations reset ALL state (store + component local state)?
+- [ ] Is there a recovery mechanism if the store is reset externally?
+- [ ] Does the cursor provide correct visual feedback at all stages?
+- [ ] Can the tool be used immediately after commit/cancel without reselection?
+- [ ] Does the tool work correctly after switching to another frame and back?
+
+**Related Patterns in Codebase**:
+- The gradient tool (`InteractiveGradientOverlay.tsx`) uses a similar overlay pattern and should be audited for the same potential issues
+- Other shape tools (rectangle, ellipse) may benefit from adding idle-state synchronization effects
+- Tool classification arrays in `useToolBehavior.ts` should be kept in sync when adding new tools
+
+**Commit Reference**: `f12bc1d` - "Fixed shape repeat issue."
+
+---
+
 ## 🤝 Implementation Notes
 
 **Recommended Implementation Order**:
