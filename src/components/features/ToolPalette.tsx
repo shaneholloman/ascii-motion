@@ -16,7 +16,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { AUTOFILL_PALETTES } from '../../constants/bezierAutofill';
 import { 
   PenTool,
-  PenLine,
   Eraser, 
   PaintBucket, 
   Pipette, 
@@ -31,6 +30,7 @@ import {
   MoveVertical,
   TypeOutline,
   Grid2x2,
+  Brush,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -63,8 +63,8 @@ const DashedRectangleIcon: React.FC<{ className?: string }> = ({ className }) =>
 
 // Organized tools by category
 const DRAWING_TOOLS: Array<{ id: Tool; name: string; icon: React.ReactNode; description: string }> = [
-  { id: 'pencil', name: 'Pencil', icon: <PenTool className="w-3 h-3" />, description: 'Draw characters' },
-  { id: 'beziershape', name: 'Bezier Shape', icon: <PenLine className="w-3 h-3" />, description: 'Draw bezier vector shapes' },
+  { id: 'pencil', name: 'Brush', icon: <Brush className="w-3 h-3" />, description: 'Draw characters' },
+  { id: 'beziershape', name: 'Bezier Pen Tool', icon: <PenTool className="w-3 h-3" />, description: 'Draw bezier vector shapes' },
   { id: 'eraser', name: 'Eraser', icon: <Eraser className="w-3 h-3" />, description: 'Remove characters' },
   { id: 'paintbucket', name: 'Fill', icon: <PaintBucket className="w-3 h-3" />, description: 'Fill connected areas' },
   { id: 'gradientfill', name: 'Gradient', icon: <GradientIcon className="w-3 h-3" />, description: 'Apply gradient fills' },
@@ -151,7 +151,7 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
           </Button>
         </TooltipTrigger>
         <TooltipContent side="right">
-          <p className="text-xs">{getToolTooltipText(tool.id, tool.description)}</p>
+          <p className="text-xs">{getToolTooltipText(tool.id, tool.name)}</p>
         </TooltipContent>
       </Tooltip>
     );
@@ -393,54 +393,38 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
                     <div className="space-y-3">
                       {/* Fill Mode Selector */}
                       <div className="space-y-2">
-                        <div className="text-xs text-muted-foreground">Fill Mode:</div>
-                        <div className="flex flex-wrap gap-1">
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant={fillMode === 'constant' ? "default" : "outline"}
-                                size="sm"
-                                className="h-7 text-xs px-3"
-                                onClick={() => setFillMode('constant')}
-                              >
-                                Constant
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Fill with current character</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant={fillMode === 'palette' ? "default" : "outline"}
-                                size="sm"
-                                className="h-7 text-xs px-3"
-                                onClick={() => setFillMode('palette')}
-                              >
-                                Palette
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Fill with palette characters</p>
-                            </TooltipContent>
-                          </Tooltip>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                variant={fillMode === 'autofill' ? "default" : "outline"}
-                                size="sm"
-                                className="h-7 text-xs px-3"
-                                onClick={() => setFillMode('autofill')}
-                              >
-                                Autofill
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Intelligent character selection</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </div>
+                        <Label htmlFor="fill-mode" className="text-xs text-muted-foreground">
+                          Fill Mode:
+                        </Label>
+                        <Select value={fillMode} onValueChange={(value) => setFillMode(value as 'constant' | 'palette' | 'autofill')}>
+                          <SelectTrigger id="fill-mode" className="w-full h-8 text-xs [&>span]:text-left">
+                            <SelectValue placeholder="Select fill mode...">
+                              {fillMode === 'constant' && 'Constant'}
+                              {fillMode === 'palette' && 'Palette'}
+                              {fillMode === 'autofill' && 'Autofill'}
+                            </SelectValue>
+                          </SelectTrigger>
+                          <SelectContent align="start">
+                            <SelectItem value="constant" className="text-xs">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Constant</span>
+                                <span className="text-muted-foreground text-[10px]">Fill with current character</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="palette" className="text-xs">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Palette</span>
+                                <span className="text-muted-foreground text-[10px]">Fill with palette characters</span>
+                              </div>
+                            </SelectItem>
+                            <SelectItem value="autofill" className="text-xs">
+                              <div className="flex flex-col">
+                                <span className="font-medium">Autofill</span>
+                                <span className="text-muted-foreground text-[10px]">Intelligent character selection</span>
+                              </div>
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
                       </div>
                       
                       {/* Autofill Palette Selector - Only shown when autofill mode is active */}
@@ -450,10 +434,12 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
                             Autofill Palette:
                           </Label>
                           <Select value={autofillPaletteId} onValueChange={setAutofillPaletteId}>
-                            <SelectTrigger id="autofill-palette" className="w-full h-8 text-xs">
-                              <SelectValue placeholder="Select palette..." />
+                            <SelectTrigger id="autofill-palette" className="w-full h-8 text-xs [&>span]:text-left">
+                              <SelectValue>
+                                {AUTOFILL_PALETTES.find(p => p.id === autofillPaletteId)?.name || 'Select palette...'}
+                              </SelectValue>
                             </SelectTrigger>
-                            <SelectContent>
+                            <SelectContent align="start">
                               {AUTOFILL_PALETTES.map((palette) => (
                                 <SelectItem key={palette.id} value={palette.id} className="text-xs">
                                   <div className="flex flex-col">

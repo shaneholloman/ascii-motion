@@ -22,7 +22,7 @@ export interface ToolHotkey {
  * - Easy to update and maintain hotkeys in one place
  */
 export const TOOL_HOTKEYS: ToolHotkey[] = [
-  { tool: 'pencil', key: 'b', displayName: 'B', description: 'Pencil tool hotkey (Ctrl for temporary eraser)' },
+  { tool: 'pencil', key: 'b', displayName: 'B', description: 'Brush tool hotkey (Ctrl for temporary eraser)' },
   { tool: 'eraser', key: 'e', displayName: 'E', description: 'Eraser tool hotkey' },
   { tool: 'paintbucket', key: 'f', displayName: 'F', description: 'Fill tool hotkey' },
   { tool: 'select', key: 'm', displayName: 'M', description: 'Rectangular selection hotkey' },
@@ -34,7 +34,7 @@ export const TOOL_HOTKEYS: ToolHotkey[] = [
   { tool: 'text', key: 't', displayName: 'T', description: 'Text tool hotkey' },
   { tool: 'asciitype', key: 'y', displayName: 'Y', description: 'ASCII Type tool hotkey' },
   { tool: 'asciibox', key: 'q', displayName: 'Q', description: 'ASCII Box drawing hotkey' },
-  { tool: 'beziershape', key: 'p', displayName: 'P', description: 'Bezier shape tool hotkey' },
+  { tool: 'beziershape', key: 'p', displayName: 'P', description: 'Bezier Pen Tool hotkey' },
   { tool: 'gradientfill', key: 'g', displayName: 'G', description: 'Gradient fill tool hotkey' },
 ];
 

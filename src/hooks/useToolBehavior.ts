@@ -129,7 +129,7 @@ export const useToolBehavior = () => {
       case 'ellipse':
         return 'Ellipse';
       case 'beziershape':
-        return 'Bezier Shape';
+        return 'Bezier Pen Tool';
       case 'eyedropper':
         return 'Eyedropper';
       case 'text':
