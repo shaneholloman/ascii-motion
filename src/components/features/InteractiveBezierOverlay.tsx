@@ -815,20 +815,32 @@ export const InteractiveBezierOverlay: React.FC = () => {
         const hit = hitTest(mouseX, mouseY);
         if (hit && hit.type === 'point') {
           // Hovering over a point with Cmd = delete mode
-          setHoverState({ type: 'point', pointId: hit.pointId });
+          // Only update if different from current state
+          if (hoverState?.type !== 'point' || hoverState.pointId !== hit.pointId) {
+            setHoverState({ type: 'point', pointId: hit.pointId });
+          }
         } else if (anchorPoints.length >= 2) {
           // Check if hovering over path segment
           const pathHit = hitTestPath(mouseX, mouseY);
           if (pathHit) {
-            setHoverState({ type: 'path', ...pathHit });
+            // Only update if different from current state
+            if (hoverState?.type !== 'path' || hoverState.afterIndex !== pathHit.afterIndex) {
+              setHoverState({ type: 'path', ...pathHit });
+            }
           } else {
-            setHoverState(null);
+            if (hoverState !== null) {
+              setHoverState(null);
+            }
           }
         } else {
-          setHoverState(null);
+          if (hoverState !== null) {
+            setHoverState(null);
+          }
         }
       } else {
-        setHoverState(null);
+        if (hoverState !== null) {
+          setHoverState(null);
+        }
       }
     },
     [
@@ -847,6 +859,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
       hitTest,
       hitTestPath,
       anchorPoints.length,
+      hoverState,
     ]
   );
 
@@ -1111,8 +1124,8 @@ export const InteractiveBezierOverlay: React.FC = () => {
     });
   }, [anchorPoints, gridToPixel, effectiveCellWidth, effectiveCellHeight]);
 
-  // Determine cursor class based on cmd key and hover state
-  const getCursorClass = useCallback(() => {
+  // Determine cursor class based on cmd key and hover state (memoized for performance)
+  const cursorClass = useMemo(() => {
     if (activeTool !== 'beziershape') return '';
     
     // If dragging anything, show grabbing cursor
@@ -1206,7 +1219,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
   return (
     <div
       ref={overlayRef}
-      className={`pointer-events-auto ${getCursorClass()}`}
+      className={`pointer-events-auto ${cursorClass}`}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
