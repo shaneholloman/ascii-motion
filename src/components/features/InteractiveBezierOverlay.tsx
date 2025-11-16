@@ -92,8 +92,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
    * Commit the bezier shape to the canvas
    */
   const handleCommit = useCallback(() => {
-    if (!isClosed || !previewCells || previewCells.size === 0) {
-      console.warn('[Bezier] Cannot commit: shape not closed or no preview data');
+    // Allow committing both closed shapes and open shapes with stroke
+    if (!previewCells || previewCells.size === 0) {
+      console.warn('[Bezier] Cannot commit: no preview data');
       return;
     }
 
@@ -232,25 +233,35 @@ export const InteractiveBezierOverlay: React.FC = () => {
     if (activeTool !== 'beziershape' || anchorPoints.length === 0) return;
 
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Ignore if user is typing in an input
-      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) {
-        return;
-      }
-
+      // For Enter and Escape, ALWAYS handle them for bezier tool (even if a UI element has focus)
+      // This prevents the toggle switch or other UI from intercepting these keys
       if (e.key === 'Enter') {
         e.preventDefault();
-        // Only commit if shape is closed
-        if (isClosed) {
-          handleCommit();
-        } else {
-          // If not closed, close the shape first then commit
-          closeShape();
-        }
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
+        // Commit the shape in whatever state it's in (open or closed)
+        handleCommit();
+        return;
       } else if (e.key === 'Escape') {
         e.preventDefault();
+        e.stopPropagation();
+        e.stopImmediatePropagation();
+        
         // Cancel works at any time (closed or not)
         handleCancel();
-      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        return;
+      }
+      
+      // For other keys, ignore if user is typing in an input
+      if (
+        e.target instanceof HTMLInputElement || 
+        e.target instanceof HTMLTextAreaElement
+      ) {
+        return;
+      }
+      
+      if (e.key === 'Delete' || e.key === 'Backspace') {
         e.preventDefault();
         // Delete all selected points
         const selectedPoints = anchorPoints.filter(p => p.selected);
@@ -268,8 +279,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
       }
     };
 
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
+    // Use capture phase to intercept events BEFORE they reach UI elements
+    window.addEventListener('keydown', handleKeyDown, true);
+    return () => window.removeEventListener('keydown', handleKeyDown, true);
   }, [activeTool, anchorPoints.length, anchorPoints, isClosed, handleCommit, handleCancel, closeShape, removePoint]);
 
   /**
@@ -278,8 +290,8 @@ export const InteractiveBezierOverlay: React.FC = () => {
   useEffect(() => {
     // Check if we're switching away from beziershape tool
     if (prevToolRef.current === 'beziershape' && activeTool !== 'beziershape') {
-      // If there's a closed shape with preview data, commit it
-      if (anchorPoints.length >= 2 && isClosed && previewCells && previewCells.size > 0) {
+      // If there's a shape (open or closed) with preview data, commit it
+      if (anchorPoints.length >= 2 && previewCells && previewCells.size > 0) {
         handleCommit();
       }
     }

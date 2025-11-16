@@ -91,7 +91,7 @@ const UTILITY_TOOLS: Array<{ id: Tool; name: string; icon: React.ReactNode; desc
 export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
   const { activeTool, setActiveTool, rectangleFilled, setRectangleFilled, paintBucketContiguous, setPaintBucketContiguous, magicWandContiguous, setMagicWandContiguous, toolAffectsChar, toolAffectsColor, toolAffectsBgColor, eyedropperPicksChar, eyedropperPicksColor, eyedropperPicksBgColor, setToolAffectsChar, setToolAffectsColor, setToolAffectsBgColor, setEyedropperPicksChar, setEyedropperPicksColor, setEyedropperPicksBgColor, fillMatchChar, fillMatchColor, fillMatchBgColor, setFillMatchChar, setFillMatchColor, setFillMatchBgColor, magicMatchChar, magicMatchColor, magicMatchBgColor, setMagicMatchChar, setMagicMatchColor, setMagicMatchBgColor } = useToolStore();
   const { contiguous, matchChar, matchColor, matchBgColor, setContiguous, setMatchCriteria } = useGradientStore();
-  const { fillMode, autofillPaletteId, setFillMode, setAutofillPaletteId, fillColorMode, setFillColorMode, strokeWidth, strokeTaperStart, strokeTaperEnd, setStrokeWidth, setStrokeTaperStart, setStrokeTaperEnd, isClosed } = useBezierStore();
+  const { fillMode, autofillPaletteId, setFillMode, setAutofillPaletteId, fillColorMode, setFillColorMode, strokeWidth, strokeTaperStart, strokeTaperEnd, setStrokeWidth, setStrokeTaperStart, setStrokeTaperEnd, isClosed, toggleClosedShape } = useBezierStore();
   const { altKeyDown, ctrlKeyDown } = useCanvasContext();
   const { flipHorizontal, flipVertical } = useFlipUtilities();
   const [showOptions, setShowOptions] = React.useState(true);
@@ -481,6 +481,30 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
                             </SelectItem>
                           </SelectContent>
                         </Select>
+                      </div>
+                      
+                      {/* Close Shape Toggle */}
+                      <div className="space-y-2 pt-2 border-t border-border/50">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="close-shape" className="text-xs text-muted-foreground">
+                            Close Shape:
+                          </Label>
+                          <Switch
+                            id="close-shape"
+                            checked={isClosed}
+                            onCheckedChange={toggleClosedShape}
+                            tabIndex={-1}
+                            onKeyDown={(e) => {
+                              // Prevent all keyboard events on this switch
+                              // (Enter should commit the bezier shape, not toggle this)
+                              e.preventDefault();
+                              e.stopPropagation();
+                            }}
+                          />
+                        </div>
+                        <p className="text-[10px] text-muted-foreground">
+                          {isClosed ? 'Shape is closed' : 'Shape is open'}
+                        </p>
                       </div>
                       
                       {/* Stroke Controls - Only shown for open paths */}

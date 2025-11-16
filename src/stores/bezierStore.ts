@@ -165,6 +165,11 @@ interface BezierStore {
    * Transitions from drawing mode to editing mode
    */
   closeShape: () => void;
+
+  /**
+   * Toggle the shape between closed and open
+   */
+  toggleClosedShape: () => void;
   
   // ========================================
   // ACTIONS - POINT MANIPULATION
@@ -502,6 +507,12 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
       isDrawing: false,
       isEditingShape: true,
     });
+  },
+
+  toggleClosedShape: () => {
+    set((state) => ({
+      isClosed: !state.isClosed,
+    }));
   },
   
   // ========================================
