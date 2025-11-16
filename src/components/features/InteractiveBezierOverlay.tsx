@@ -20,6 +20,7 @@ import type { CanvasHistoryAction } from '../../types';
 export const InteractiveBezierOverlay: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const svgOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
+  const prevToolRef = useRef<string>('beziershape');
   const { activeTool, pushToHistory } = useToolStore();
   const { cellWidth, cellHeight, zoom, panOffset } = useCanvasContext();
   
@@ -267,6 +268,22 @@ export const InteractiveBezierOverlay: React.FC = () => {
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [activeTool, anchorPoints.length, anchorPoints, isClosed, handleCommit, handleCancel, closeShape, removePoint]);
+
+  /**
+   * Auto-commit shape when switching away from bezier tool
+   */
+  useEffect(() => {
+    // Check if we're switching away from beziershape tool
+    if (prevToolRef.current === 'beziershape' && activeTool !== 'beziershape') {
+      // If there's a closed shape with preview data, commit it
+      if (anchorPoints.length >= 2 && isClosed && previewCells && previewCells.size > 0) {
+        handleCommit();
+      }
+    }
+    
+    // Update the ref for next time
+    prevToolRef.current = activeTool;
+  }, [activeTool, anchorPoints.length, isClosed, previewCells, handleCommit]);
 
   /**
    * Generate and update preview whenever shape changes
