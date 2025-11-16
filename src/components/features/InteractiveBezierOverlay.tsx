@@ -671,7 +671,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
         }, 0);
       } else if (isClosed) {
         // Click outside closed shape - commit it
-        // TODO: Implement commit logic
+        handleCommit();
       }
     },
     [
@@ -692,6 +692,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
       startDragHandle,
       startDragShape,
       insertPointOnSegment,
+      handleCommit,
       removePoint,
     ]
   );
