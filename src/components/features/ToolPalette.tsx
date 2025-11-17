@@ -5,6 +5,7 @@ import { useBezierStore } from '../../stores/bezierStore';
 import { useAnimationStore } from '../../stores/animationStore';
 import { useCanvasContext } from '../../contexts/CanvasContext';
 import { useFlipUtilities } from '../../hooks/useFlipUtilities';
+import { useCropToSelection } from '../../hooks/useCropToSelection';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '@/components/ui/tooltip';
@@ -33,6 +34,7 @@ import {
   TypeOutline,
   Grid2x2,
   Brush,
+  Crop,
 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
@@ -97,6 +99,7 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
   const { currentFrameIndex } = useAnimationStore();
   const { altKeyDown, ctrlKeyDown } = useCanvasContext();
   const { flipHorizontal, flipVertical } = useFlipUtilities();
+  const { canCrop, cropToSelection } = useCropToSelection();
   const [showOptions, setShowOptions] = React.useState(true);
   const [showTools, setShowTools] = React.useState(true);
 
@@ -111,7 +114,7 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
   }
 
   // Tools that actually have configurable options. (Removed 'eraser' and 'text' per layout bug fix.)
-  const hasOptions = ['rectangle', 'ellipse', 'paintbucket', 'gradientfill', 'magicwand', 'pencil', 'eraser', 'eyedropper', 'beziershape'].includes(effectiveTool);
+  const hasOptions = ['rectangle', 'ellipse', 'paintbucket', 'gradientfill', 'magicwand', 'pencil', 'eraser', 'eyedropper', 'beziershape', 'select', 'lasso'].includes(effectiveTool);
 
   // Get the current tool's icon
   const getCurrentToolIcon = () => {
@@ -409,6 +412,27 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
                         </Tooltip>
                       </div>
                     </div>
+                  )}
+                  
+                  {/* Crop to Selection - Available for all selection tools */}
+                  {(effectiveTool === 'select' || effectiveTool === 'lasso' || effectiveTool === 'magicwand') && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="w-full"
+                          onClick={cropToSelection}
+                          disabled={!canCrop()}
+                        >
+                          <Crop className="w-3 h-3 mr-2" />
+                          Crop
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Crop canvas to selection (Cmd+Shift+C)</p>
+                      </TooltipContent>
+                    </Tooltip>
                   )}
                   
                   {/* Bezier Shape Tool Options */}

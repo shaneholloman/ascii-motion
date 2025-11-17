@@ -59,6 +59,7 @@ const KEYBOARD_SHORTCUTS: ShortcutSection[] = [
       { keys: ['Esc'], description: 'Clear selection' },
       { keys: ['Shift', 'H'], description: 'Flip selection horizontally' },
       { keys: ['Shift', 'V'], description: 'Flip selection vertically' },
+      { keys: ['Cmd', 'Shift', 'C'], description: 'Crop canvas to selection' },
       { keys: ['Space'], description: 'Pan canvas' },
     ]
   },
