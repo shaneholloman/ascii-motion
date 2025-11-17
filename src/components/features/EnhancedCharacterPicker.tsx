@@ -321,21 +321,23 @@ export const EnhancedCharacterPicker: React.FC<EnhancedCharacterPickerProps> = (
                   className="flex-1 font-mono text-center"
                   maxLength={1}
                 />
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button
-                      onClick={handleConfirmCustomCharacter}
-                      disabled={!customCharacter}
-                      size="sm"
-                      className="px-3"
-                    >
-                      <Check className="w-4 h-4" />
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent>
-                    <p>Confirm character</p>
-                  </TooltipContent>
-                </Tooltip>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        onClick={handleConfirmCustomCharacter}
+                        disabled={!customCharacter}
+                        size="sm"
+                        className="px-3"
+                      >
+                        <Check className="w-4 h-4" />
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Confirm character</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </div>
           </div>
