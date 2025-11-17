@@ -3,7 +3,6 @@ import { useCanvasStore } from '../stores/canvasStore';
 import { useToolStore } from '../stores/toolStore';
 import { useAnimationStore } from '../stores/animationStore';
 import { cropCanvasToSelection, cropAllFramesToSelection } from '../utils/cropUtils';
-import type { Cell } from '../types';
 
 /**
  * Hook for cropping canvas to selection across all frames
