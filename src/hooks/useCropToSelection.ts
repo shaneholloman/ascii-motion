@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+import { toast } from 'sonner';
 import { useCanvasStore } from '../stores/canvasStore';
 import { useToolStore } from '../stores/toolStore';
 import { useAnimationStore } from '../stores/animationStore';
@@ -60,7 +61,7 @@ export function useCropToSelection() {
 
     // Validate new dimensions
     if (newWidth < 4 || newWidth > 200 || newHeight < 4 || newHeight > 100) {
-      console.error('Crop dimensions out of valid range (4-200 x 4-100)');
+      toast.error('Cannot execute crop: minimum canvas size is 4x4 characters.');
       return;
     }
 
