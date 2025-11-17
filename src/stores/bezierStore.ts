@@ -95,6 +95,9 @@ interface BezierStore {
   /** Details of the handle being dragged */
   draggingHandleId: { pointId: string; type: 'in' | 'out' } | null;
   
+  /** Key for forcing component remount (increment to remount without tool change) */
+  remountKey: number;
+  
   // ========================================
   // FILL CONFIGURATION
   // ========================================
@@ -365,6 +368,12 @@ interface BezierStore {
   reset: () => void;
   
   /**
+   * Force component remount by incrementing remountKey
+   * Used to reset all component state without changing active tool
+   */
+  forceRemount: () => void;
+  
+  /**
    * Set the original frame index when starting a new shape
    * @param frameIndex - The current frame index
    */
@@ -418,6 +427,7 @@ interface BezierStoreState {
   dragStartShapePos: Array<{ x: number; y: number }> | null;
   draggingPointId: string | null;
   draggingHandleId: { pointId: string; type: 'in' | 'out' } | null;
+  remountKey: number;
   fillMode: 'constant' | 'palette' | 'autofill';
   autofillPaletteId: string;
   fillColorMode: 'current' | 'palette';
@@ -444,6 +454,7 @@ const createDefaultState = (): BezierStoreState => ({
   dragStartShapePos: null,
   draggingPointId: null,
   draggingHandleId: null,
+  remountKey: 0,
   fillMode: 'constant',
   autofillPaletteId: 'block',
   fillColorMode: 'current',
@@ -1179,7 +1190,12 @@ export const useBezierStore = create<BezierStore>((set, get) => ({
       ...createDefaultState(),
       ...settingsToUse,
       sessionSettings: state.sessionSettings,
+      remountKey: state.remountKey, // Preserve remountKey across resets
     });
+  },
+  
+  forceRemount: () => {
+    set((state) => ({ remountKey: state.remountKey + 1 }));
   },
   
   setOriginalFrame: (frameIndex: number) => {

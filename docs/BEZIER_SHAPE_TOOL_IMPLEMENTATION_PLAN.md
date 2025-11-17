@@ -1550,4 +1550,47 @@ React.useEffect(() => {
 
 ---
 
+## 🐛 Known Quirks & Implementation Details
+
+### Component Remounting Strategy
+
+**Issue**: When creating subsequent bezier shapes after committing the first one, the first-point drag behavior would fail to create handles on the second+ shapes. 
+
+**Root Cause**: React re-renders when `isDrawing` changes from `false` → `true` cause `PointerMove` events to be dropped or fire inconsistently (often only 1 event before `PointerUp`). This left the `placingPointRef` tracking out of sync with the actual pointer state, preventing handle creation from being triggered.
+
+**Failed Solutions**:
+- Using refs instead of state for placement tracking
+- Querying `useBezierStore.getState()` directly
+- Pointer capture with `setPointerCapture`
+- Lowering distance threshold from 0.1 to 0.02
+- Timer-based detection (50ms delay)
+- Immediate handle enable when `isDrawing: true`
+- Manual state reset in commit/cancel/idle
+
+**Working Solution**: Force complete component unmount/remount using a `remountKey` strategy:
+
+1. **Added to bezierStore**:
+   ```typescript
+   remountKey: number; // Starts at 0
+   forceRemount: () => void; // Increments remountKey
+   ```
+
+2. **In InteractiveBezierOverlay**:
+   ```typescript
+   const performCompleteCleanup = useCallback(() => {
+     forceRemount(); // Increment key to trigger unmount/remount
+   }, [forceRemount]);
+   ```
+
+3. **In CanvasOverlay**:
+   ```tsx
+   <InteractiveBezierOverlay key={bezierRemountKey} />
+   ```
+
+**Why It Works**: Changing the `key` prop forces React to completely unmount the old component and mount a fresh instance, resetting all refs (`placingPointRef`, `dragStartStateRef`, `hasHadPointsRef`) and local state without any visible UI changes. This is more reliable than manual state cleanup because it leverages React's lifecycle guarantees.
+
+**Critical**: The `hasHadPointsRef` prevents cleanup from triggering on the initial mount, which would otherwise cause the app to default to beziershape tool instead of the intended brush tool.
+
+---
+
 **This comprehensive plan provides everything needed to implement a professional-grade bezier shape tool for ASCII Motion. The phased approach ensures steady progress, and the detailed specifications prevent ambiguity during implementation.**

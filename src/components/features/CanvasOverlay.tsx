@@ -38,7 +38,8 @@ export const CanvasOverlay: React.FC = () => {
     rectanglePreview: boxRectanglePreview
   } = useAsciiBoxStore();
   const {
-    previewCells: bezierPreview
+    previewCells: bezierPreview,
+    remountKey: bezierRemountKey,
   } = useBezierStore();
   const { canvasBackgroundColor, width, height } = useCanvasStore();
   const { theme } = useTheme();
@@ -901,7 +902,7 @@ export const CanvasOverlay: React.FC = () => {
         }}
       />
       <InteractiveGradientOverlay />
-      <InteractiveBezierOverlay />
+      <InteractiveBezierOverlay key={bezierRemountKey} />
     </>
   );
 };

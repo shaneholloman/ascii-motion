@@ -29,6 +29,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
   const overlayRef = useRef<HTMLDivElement>(null);
   const svgOffsetRef = useRef<{ x: number; y: number }>({ x: 0, y: 0 });
   const prevToolRef = useRef<string>('beziershape');
+  const hasHadPointsRef = useRef<boolean>(false); // Track if we've ever had points (to avoid cleanup on initial mount)
   
   // Track drag start state for creating history on drag end
   const dragStartStateRef = useRef<{
@@ -45,8 +46,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
   const { cellWidth, cellHeight, zoom, panOffset } = useCanvasContext();
   
   // Track if we just placed a new point and should be creating handles on drag
-  const [placingPointId, setPlacingPointId] = useState<string | null>(null);
-  const [placementStartPos, setPlacementStartPos] = useState<{ x: number; y: number } | null>(null);
+  const placingPointRef = useRef<{ pointId: string; startPos: { x: number; y: number } } | null>(null);
   
   // Track Alt+click on point without handles (to differentiate click vs drag)
   const [altClickPointId, setAltClickPointId] = useState<string | null>(null);
@@ -92,6 +92,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
     captureState,
     commitShape,
     cancelShape,
+    forceRemount,
   } = useBezierStore();
 
   const { width, height, cells, setCanvasData } = useCanvasStore();
@@ -108,6 +109,16 @@ export const InteractiveBezierOverlay: React.FC = () => {
   const colorPalette = useMemo(() => {
     return getActivePalette();
   }, [getActivePalette, activePaletteId, customPalettes]);
+
+  /**
+   * Force complete reset by incrementing remountKey to trigger unmount/remount
+   * This avoids visual tool toggle flash while still resetting all component state
+   */
+  const performCompleteCleanup = useCallback(() => {
+    // Increment remountKey to force React to unmount/remount the component
+    // This resets all refs and local state without any visible UI change
+    forceRemount();
+  }, [forceRemount]);
 
   /**
    * Commit the bezier shape to the canvas
@@ -162,13 +173,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
 
       pushToHistory(historyAction);
 
-      // Reset local component state so user can immediately start a new shape
-      setPlacingPointId(null);
-      setPlacementStartPos(null);
-      setAltClickPointId(null);
-      setAltClickStartPos(null);
-      setCmdKeyPressed(false);
-      setHoverState(null);
+      // Perform complete cleanup to reset ALL component state
+      // This ensures the component is in the exact same state as after unmount/remount
+      performCompleteCleanup();
     } catch (error) {
       console.error('[Bezier] Error committing shape:', error);
     }
@@ -183,6 +190,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
     selectedChar,
     selectedColor,
     selectedBgColor,
+    performCompleteCleanup,
   ]);
 
   /**
@@ -191,14 +199,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
   const handleCancel = useCallback(() => {
     cancelShape();
     
-    // Reset local component state so user can immediately start a new shape
-    setPlacingPointId(null);
-    setPlacementStartPos(null);
-    setAltClickPointId(null);
-    setAltClickStartPos(null);
-    setCmdKeyPressed(false);
-    setHoverState(null);
-  }, [cancelShape]);
+    // Perform complete cleanup to reset ALL component state
+    performCompleteCleanup();
+  }, [cancelShape, performCompleteCleanup]);
 
   /**
    * Ensure local interaction state is cleared any time the bezier store
@@ -214,22 +217,27 @@ export const InteractiveBezierOverlay: React.FC = () => {
       !isDraggingHandle &&
       !isDraggingShape;
 
+    // Track if we've had points
+    if (anchorPoints.length > 0) {
+      hasHadPointsRef.current = true;
+    }
+
     if (!storeIdle) {
       return;
     }
 
-    // Only clear these states when truly idle
-    // Don't clear placingPointId/placementStartPos here since they're for the NEXT point
-    setAltClickPointId(null);
-    setAltClickStartPos(null);
-    setCmdKeyPressed(false);
-    setHoverState(null);
+    // Only perform cleanup if we've previously had points (avoids cleanup on initial mount)
+    if (hasHadPointsRef.current) {
+      performCompleteCleanup();
+      hasHadPointsRef.current = false; // Reset for next shape
+    }
   }, [
     anchorPoints.length,
     isDrawing,
     isDraggingPoint,
     isDraggingHandle,
     isDraggingShape,
+    performCompleteCleanup,
   ]);
 
   /**
@@ -666,8 +674,14 @@ export const InteractiveBezierOverlay: React.FC = () => {
   /**
    * Handle mouse down - start interaction
    */
-  const handleMouseDown = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerDown = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
+      if (e.button !== 0) {
+        return;
+      }
+
+      e.currentTarget.setPointerCapture?.(e.pointerId);
+
       if (!overlayRef.current) return;
 
       const rect = overlayRef.current.getBoundingClientRect();
@@ -853,9 +867,16 @@ export const InteractiveBezierOverlay: React.FC = () => {
         };
         pushToHistory(addPointAction);
         
-        // Track that we just placed a point - if mouse moves we'll add handles
-        setPlacementStartPos(gridPos);
-        setPlacingPointId(newPointId);
+        // For subsequent points (isDrawing: true), immediately enable handles and start drag
+        // For first point (isDrawing: false), wait for PointerMove to detect drag intent
+        if (isDrawing) {
+          placingPointRef.current = { pointId: newPointId, startPos: gridPos };
+          enableHandlesForDrag(newPointId);
+          startDragHandle(newPointId, 'out', gridPos);
+        } else {
+          // Track that we just placed first point - if pointer moves, we'll add handles
+          placingPointRef.current = { pointId: newPointId, startPos: gridPos };
+        }
       } else if (isClosed) {
         // Click outside closed shape - commit it
         handleCommit();
@@ -881,14 +902,17 @@ export const InteractiveBezierOverlay: React.FC = () => {
       insertPointOnSegment,
       handleCommit,
       removePoint,
+      enableHandlesForDrag,
+      currentFrameIndex,
+      pushToHistory,
     ]
   );
 
   /**
    * Handle mouse move - update drag state or hover
    */
-  const handleMouseMove = useCallback(
-    (e: React.MouseEvent<HTMLDivElement>) => {
+  const handlePointerMove = useCallback(
+    (e: React.PointerEvent<HTMLDivElement>) => {
       if (!overlayRef.current) return;
 
       const rect = overlayRef.current.getBoundingClientRect();
@@ -916,47 +940,57 @@ export const InteractiveBezierOverlay: React.FC = () => {
               handleOut: point.handleOut ? { ...point.handleOut } : null,
               wasSymmetric: point.handleSymmetric,
             };
+            
+            enableHandlesForDrag(altClickPointId);
+            startDragHandle(altClickPointId, 'out', altClickStartPos);
           }
           
-          enableHandlesForDrag(altClickPointId);
-          startDragHandle(altClickPointId, 'out', altClickStartPos);
-          
-          // Clear alt-click state
+          // Clear alt-click state regardless of whether point was found
           setAltClickPointId(null);
           setAltClickStartPos(null);
         }
       }
 
       // Check if we're dragging from a just-placed point to create handles
-      if (placingPointId && placementStartPos) {
-        const deltaX = gridPos.x - placementStartPos.x;
-        const deltaY = gridPos.y - placementStartPos.y;
+      const placingPoint = placingPointRef.current;
+      
+      if (placingPoint) {
+        const deltaX = gridPos.x - placingPoint.startPos.x;
+        const deltaY = gridPos.y - placingPoint.startPos.y;
         const dist = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
         
-        // If moved more than 0.1 grid units, add handles and start dragging
-        if (dist > 0.1) {
-          // Capture initial handle state before enabling handles
-          const point = anchorPoints.find((p) => p.id === placingPointId);
+        // Lower threshold (0.02 instead of 0.1) to catch drag intent earlier
+        // This compensates for PointerMove events being dropped during React re-renders
+        // when transitioning from idle to isDrawing state
+        if (dist > 0.02) {
+          // Capture initial handle state before enabling handles using freshest store data
+          const latestPoint = useBezierStore
+            .getState()
+            .anchorPoints.find((p) => p.id === placingPoint.pointId);
+          const point = latestPoint ?? anchorPoints.find((p) => p.id === placingPoint.pointId);
+          
           if (point) {
             dragStartStateRef.current = {
               type: 'handle',
-              pointId: placingPointId,
+              pointId: placingPoint.pointId,
               handleType: 'out',
               handleIn: point.handleIn ? { ...point.handleIn } : null,
               handleOut: point.handleOut ? { ...point.handleOut } : null,
               wasSymmetric: point.handleSymmetric,
             };
+            
+            // Enable handles starting at zero length (cursor position)
+            enableHandlesForDrag(placingPoint.pointId);
+            
+            // Start dragging the out handle from the point's position
+            startDragHandle(placingPoint.pointId, 'out', placingPoint.startPos);
+          } else {
+            console.warn('[Bezier PointerMove] Point not found! Cannot enable handles.');
           }
           
-          // Enable handles starting at zero length (cursor position)
-          enableHandlesForDrag(placingPointId);
-          
-          // Start dragging the out handle from the point's position
-          startDragHandle(placingPointId, 'out', placementStartPos);
-          
-          // Clear placement state
-          setPlacingPointId(null);
-          setPlacementStartPos(null);
+          // Clear placement state regardless of whether point was found
+          // (Prevents stale state from blocking future operations)
+          placingPointRef.current = null;
         }
       }
 
@@ -1006,14 +1040,12 @@ export const InteractiveBezierOverlay: React.FC = () => {
       pixelToGrid,
       altClickPointId,
       altClickStartPos,
-      placingPointId,
-      placementStartPos,
       enableHandlesForDrag,
       startDragHandle,
       cmdKeyPressed,
       hitTest,
       hitTestPath,
-      anchorPoints.length,
+      anchorPoints,
       hoverState,
     ]
   );
@@ -1021,7 +1053,11 @@ export const InteractiveBezierOverlay: React.FC = () => {
   /**
    * Handle mouse up - end interaction
    */
-  const handleMouseUp = useCallback(() => {
+  const handlePointerUp = useCallback((e?: React.PointerEvent<HTMLDivElement>) => {
+    if (e) {
+      e.currentTarget.releasePointerCapture?.(e.pointerId);
+    }
+
     // If Alt+clicked point without dragging, use smart handle generation
     if (altClickPointId && altClickStartPos) {
       // Capture before state
@@ -1058,8 +1094,7 @@ export const InteractiveBezierOverlay: React.FC = () => {
     }
     
     // Clear placement tracking
-    setPlacingPointId(null);
-    setPlacementStartPos(null);
+    placingPointRef.current = null;
     
     // Push history for completed drags
     if (isDraggingPoint && dragStartStateRef.current.type === 'point') {
@@ -1157,6 +1192,14 @@ export const InteractiveBezierOverlay: React.FC = () => {
     togglePointHandles,
     endDrag,
     pushToHistory,
+    effectiveCellWidth,
+    effectiveCellHeight,
+    cellWidth,
+    cellHeight,
+    zoom,
+    panOffset,
+    enableHandlesForDrag,
+    startDragHandle,
   ]);
 
   /**
@@ -1488,10 +1531,9 @@ export const InteractiveBezierOverlay: React.FC = () => {
     <div
       ref={overlayRef}
       className={`pointer-events-auto ${cursorClass}`}
-      onMouseDown={handleMouseDown}
-      onMouseMove={handleMouseMove}
-      onMouseUp={handleMouseUp}
-      onMouseLeave={handleMouseUp}
+  onPointerDown={handlePointerDown}
+  onPointerMove={handlePointerMove}
+  onPointerUp={handlePointerUp}
       style={containerStyle}
     >
       <svg 
