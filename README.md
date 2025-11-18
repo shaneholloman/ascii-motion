@@ -144,7 +144,7 @@ Where I'm at with the concept:
 - [x] **High-DPI canvas rendering** - Crisp text quality on all displays
 - [x] **Performance optimizations** - 60fps rendering with batched updates
 - [x] **Gap-free drawing tools** - Smooth line interpolation for professional drawing
-- [x] **Performance monitoring** - Real-time metrics overlay (Ctrl+Shift+P)
+- [x] **Performance monitoring** - Real-time metrics overlay (Ctrl+Shift+M)
 - [x] Theme system (dark/light mode)
       
 </details>

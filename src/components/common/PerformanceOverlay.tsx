@@ -4,6 +4,9 @@ import { performanceMonitor } from '../../utils/performance';
 /**
  * Performance Monitor Overlay
  * Shows real-time performance metrics during development
+ * 
+ * Toggle with: Ctrl+Shift+M (or Cmd+Shift+M on Mac)
+ * Note: Changed from Ctrl+Shift+P to avoid conflict with Bezier Pen Tool (P)
  */
 export const PerformanceOverlay: React.FC = () => {
   const [stats, setStats] = useState({
@@ -27,16 +30,20 @@ export const PerformanceOverlay: React.FC = () => {
     return () => clearInterval(interval);
   }, [isVisible]);
 
-  // Show/hide with keyboard shortcut
+  // Show/hide with keyboard shortcut (Ctrl+Shift+M for "Monitor")
   useEffect(() => {
     const handleKeyPress = (event: KeyboardEvent) => {
-      if (event.key === 'p' && event.ctrlKey && event.shiftKey) {
+      // Check for Ctrl+Shift+M (or Cmd+Shift+M on Mac)
+      if (event.key.toLowerCase() === 'm' && (event.ctrlKey || event.metaKey) && event.shiftKey) {
+        event.preventDefault();
+        event.stopPropagation();
         setIsVisible(!isVisible);
       }
     };
 
-    window.addEventListener('keydown', handleKeyPress);
-    return () => window.removeEventListener('keydown', handleKeyPress);
+    // Use capture phase to intercept before other handlers
+    window.addEventListener('keydown', handleKeyPress, true);
+    return () => window.removeEventListener('keydown', handleKeyPress, true);
   }, [isVisible]);
 
   if (!isVisible) {

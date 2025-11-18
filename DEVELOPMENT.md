@@ -1062,7 +1062,7 @@ const animateFrame = useCallback(() => {
 - **Render Batching**: RequestAnimationFrame-based scheduling maintains 60fps
 - **Dirty Region Tracking**: Only redraws changed areas for optimal performance
 - **Line Interpolation**: Gap-free drawing tools using Bresenham's algorithm
-- **Performance Monitoring**: Real-time FPS tracking and efficiency metrics (Ctrl+Shift+P)
+- **Performance Monitoring**: Real-time FPS tracking and efficiency metrics (Ctrl+Shift+M)
 
 #### Memory Management
 - **Selective Deep Copying**: Only during reordering to prevent reference sharing
@@ -5865,7 +5865,7 @@ Reorganized header UI to improve project file management and discoverability of 
   - Color Management (X, [, ])
   - Zoom & Navigation (+, =, -)
   - Animation & Timeline (,, ., Cmd+N, Cmd+D, Cmd+Delete, Shift+O)
-  - Performance (Ctrl+Shift+P)
+  - Performance Monitor (Ctrl+Shift+M)
 - **Platform-Aware**: Shows ⌘ on Mac, Ctrl on Windows/Linux
 - **Scrollable**: Handles comprehensive list with smooth scrolling
 

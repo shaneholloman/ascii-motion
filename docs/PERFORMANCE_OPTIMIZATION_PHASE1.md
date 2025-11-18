@@ -50,7 +50,7 @@
 
 #### **Enable Performance Overlay:**
 1. Open the app at `http://localhost:5180/`
-2. Press **Ctrl+Shift+P** to show performance stats
+2. Press **Ctrl+Shift+M** to show performance stats
 3. Use drawing tools (pencil, brush) with rapid mouse movements
 4. Watch metrics: 
    - **Green render times** (under 16ms) = Good
@@ -64,7 +64,7 @@
 4. **Animation playback**: Test during frame transitions
 
 #### **Keyboard Shortcuts:**
-- **Ctrl+Shift+P**: Toggle performance overlay
+- **Ctrl+Shift+M**: Toggle performance monitor overlay
 - **Clear button**: Reset performance history
 - **Log Stats button**: Print detailed metrics to console
 

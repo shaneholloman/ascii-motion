@@ -1,12 +1,19 @@
 // Auto-generated version file - DO NOT EDIT MANUALLY
 // This file is updated by scripts/version-bump.js during deployment
 
-export const VERSION = "0.2.42";
-export const BUILD_DATE = "2025-11-17T21:13:47.740Z";
-export const BUILD_HASH = "42c8bce";
+export const VERSION = "0.2.43";
+export const BUILD_DATE = "2025-11-18T04:49:10.189Z";
+export const BUILD_HASH = "1d96148";
 
 // Version history with commit messages
 export const VERSION_HISTORY = [
+  {
+    "version": "0.2.43",
+    "date": "2025-11-18T04:49:10.189Z",
+    "commits": [
+      "Added monaspace and Geist mono to font stack"
+    ]
+  },
   {
     "version": "0.2.42",
     "date": "2025-11-17T21:13:47.740Z",
