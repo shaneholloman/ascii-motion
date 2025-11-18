@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { LogIn, Crown, LogOut, Settings, User, UserCircle, Shield } from 'lucide-react';
+import { LogIn, Crown, LogOut, Settings, User, UserCircle, Shield, Search } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   DropdownMenu,
@@ -15,18 +15,21 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { useAuth, SignUpDialog, SignInDialog, PasswordResetDialog, AccountSettingsDialog, ProfileSettingsDialog, useAdminCheckContext } from '@ascii-motion/premium';
+import { useAuth, SignUpDialog, SignInDialog, PasswordResetDialog, AccountSettingsDialog, ProfileSettingsDialog, useAdminCheckContext, AdminProjectViewerDialog } from '@ascii-motion/premium';
 import { Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
+import { useAdminProjectLoader } from '@/hooks/useAdminProjectLoader';
 
 export function AccountButton() {
   const { user, profile, loading, signOut } = useAuth();
   const { isAdmin } = useAdminCheckContext();
+  const { loadProjectSession } = useAdminProjectLoader();
   const [showSignUp, setShowSignUp] = useState(false);
   const [showSignIn, setShowSignIn] = useState(false);
   const [showPasswordReset, setShowPasswordReset] = useState(false);
   const [showAccountSettings, setShowAccountSettings] = useState(false);
   const [showProfileSettings, setShowProfileSettings] = useState(false);
+  const [showAdminProjectViewer, setShowAdminProjectViewer] = useState(false);
 
   // Listen for custom event to open signup dialog
   useEffect(() => {
@@ -166,6 +169,12 @@ export function AccountButton() {
                 <Shield className="mr-2 h-4 w-4" />
                 <span>Admin Panel</span>
               </DropdownMenuItem>
+              
+              <DropdownMenuItem onClick={() => setShowAdminProjectViewer(true)}>
+                <Search className="mr-2 h-4 w-4" />
+                <span>Check Project ID</span>
+              </DropdownMenuItem>
+              
               <DropdownMenuSeparator />
             </>
           )}
@@ -197,6 +206,15 @@ export function AccountButton() {
           toast.success('Profile updated successfully');
         }}
       />
+
+      {/* Admin Project Viewer Dialog */}
+      {isAdmin && (
+        <AdminProjectViewerDialog
+          open={showAdminProjectViewer}
+          onOpenChange={setShowAdminProjectViewer}
+          onLoadProject={loadProjectSession}
+        />
+      )}
     </TooltipProvider>
   );
 }

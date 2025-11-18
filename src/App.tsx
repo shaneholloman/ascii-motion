@@ -26,6 +26,7 @@ import { PublishToGalleryDialogWrapper } from './components/features/PublishToGa
 import { PerformanceOverlay } from './components/common/PerformanceOverlay'
 import { EditorPage } from './pages/EditorPage'
 import { CommunityPage } from './pages/CommunityPage'
+import { useAdminProjectLoader } from './hooks/useAdminProjectLoader'
 
 /**
  * Inner component that uses auth hooks
@@ -33,6 +34,9 @@ import { CommunityPage } from './pages/CommunityPage'
  * Fixed: Moved useAuth hook inside AuthProvider context
  */
 function AppContent() {
+  // Admin project loader (handles sessionStorage loading after navigation)
+  useAdminProjectLoader();
+  
   // Get typography callbacks from CanvasContext
   const { setFontSize, setCharacterSpacing, setLineSpacing, setSelectedFontId } = useCanvasContext()
   
