@@ -16,6 +16,12 @@ dist-ssr
 packages/*/dist
 packages/*/.tsbuildinfo
 
+# Backup directories
+.backup-premium/
+
+# MCP tool caches
+.playwright-mcp/
+
 # Premium package protection
 # Note: Premium code is in a separate private Git repository (Git submodule).
 # No gitignore patterns needed - the entire packages/premium/ directory
