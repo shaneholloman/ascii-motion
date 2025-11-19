@@ -87,7 +87,7 @@ export const CollapsiblePanel: React.FC<CollapsiblePanelProps> = ({
         id={`panel-${side}`}
         className={cn(
           'h-full',
-          side === 'bottom' ? 'px-4 pt-4 pb-2' : 'p-4 overflow-y-auto', // Bottom panel has different padding, side panels scroll
+          side === 'bottom' ? 'px-4 pt-4 pb-2' : 'p-4 overflow-y-auto scrollbar-gutter-stable', // Bottom panel has different padding, side panels scroll with stable gutter
           side === 'left' && 'scrollbar-left' // Put scrollbar on left side for left panel
         )}
         role="region"
