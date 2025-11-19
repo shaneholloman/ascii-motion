@@ -627,7 +627,7 @@ export const AnimationTimeline: React.FC = () => {
             <h4 className="text-xs font-medium text-muted-foreground">Frames</h4>
             <TimelineZoomControl />
           </div>
-          <div className="w-full overflow-x-auto" ref={scrollContainerRef}>
+          <div className="w-full overflow-x-auto scrollbar-gutter-horizontal" ref={scrollContainerRef}>
             <div 
               className="flex gap-1" 
               style={{ 
