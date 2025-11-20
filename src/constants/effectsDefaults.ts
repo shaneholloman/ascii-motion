@@ -93,7 +93,12 @@ export const DEFAULT_REMAP_COLORS_SETTINGS: RemapColorsEffectSettings = {
   
   // Processing options
   matchExact: true,
-  includeTransparent: false
+  includeTransparent: false,
+  
+  // Palette-based mapping
+  paletteMode: 'manual',
+  selectedPaletteId: null,
+  mappingAlgorithm: 'closest'
 };
 
 export const DEFAULT_REMAP_CHARACTERS_SETTINGS: RemapCharactersEffectSettings = {

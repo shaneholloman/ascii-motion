@@ -16,6 +16,49 @@ import type {
   EffectProcessingResult,
   ColorRange,
 } from '../types/effects';
+import { ColorMatcher } from './asciiConverter';
+
+/**
+ * Map canvas colors to palette colors using specified algorithm
+ * 
+ * @param canvasColors - Array of unique hex colors from canvas (e.g., ['#FF0000', '#00FF00'])
+ * @param paletteColors - Array of hex colors from selected palette
+ * @param algorithm - 'closest' for Euclidean RGB distance, 'by-index' for sequential mapping
+ * @returns Record mapping each canvas color to a palette color
+ */
+export function mapCanvasColorsToPalette(
+  canvasColors: string[],
+  paletteColors: string[],
+  algorithm: 'closest' | 'by-index'
+): Record<string, string> {
+  const mappings: Record<string, string> = {};
+  
+  // Handle empty palette
+  if (paletteColors.length === 0) {
+    // Identity mapping if no palette colors available
+    canvasColors.forEach(color => {
+      mappings[color] = color;
+    });
+    return mappings;
+  }
+  
+  if (algorithm === 'by-index') {
+    // Sequential mapping: canvas colors map to palette by index
+    // If palette is shorter, overflow colors map to last palette color
+    canvasColors.forEach((canvasColor, index) => {
+      const paletteIndex = Math.min(index, paletteColors.length - 1);
+      mappings[canvasColor] = paletteColors[paletteIndex];
+    });
+  } else {
+    // Closest match: find nearest color in palette using Euclidean RGB distance
+    canvasColors.forEach(canvasColor => {
+      const { r, g, b } = ColorMatcher.hexToRgb(canvasColor);
+      mappings[canvasColor] = ColorMatcher.findClosestColor(r, g, b, paletteColors);
+    });
+  }
+  
+  return mappings;
+}
 
 /**
  * Main effect processing function - applies an effect to canvas data
