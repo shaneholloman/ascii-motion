@@ -9,10 +9,33 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Button } from '../../ui/button';
 import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '../../ui/select';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { useEffectsStore } from '../../../stores/effectsStore';
 import { useCanvasStore } from '../../../stores/canvasStore';
+import { usePaletteStore } from '../../../stores/paletteStore';
 import { ColorPickerOverlay } from '../ColorPickerOverlay';
-import { RotateCcw, Eye, EyeOff, MoveRight, RotateCcwSquare } from 'lucide-react';
+import { mapCanvasColorsToPalette } from '../../../utils/effectsProcessing';
+import { 
+  RotateCcw, 
+  Eye, 
+  EyeOff, 
+  MoveRight, 
+  RotateCcwSquare,
+  Plus,
+  Trash2,
+  ChevronLeft,
+  ChevronRight,
+  ArrowUpDown,
+  Settings,
+  Upload,
+  Download,
+  AlertCircle
+} from 'lucide-react';
+import { ManagePalettesDialog } from '../ManagePalettesDialog';
+import { ImportPaletteDialog } from '../ImportPaletteDialog';
+import { ExportPaletteDialog } from '../ExportPaletteDialog';
 
 // Color utility functions
 const hexToHsl = (hex: string): [number, number, number] => {
@@ -82,12 +105,36 @@ export function RemapColorsEffectPanel() {
   } = useEffectsStore();
 
   const { cells } = useCanvasStore();
+  
+  // Palette store hooks
+  const {
+    palettes,
+    getAllPalettes,
+    getActivePalette,
+    createCustomCopy,
+    updateColor,
+    addColor,
+    removeColor,
+    reorderColors,
+    reversePalette,
+    setActivePalette
+  } = usePaletteStore();
 
   const isCurrentlyPreviewing = isPreviewActive && previewEffect === 'remap-colors';
 
-  // Color picker state
+  // Color picker state - now supports palette colors too
   const [isColorPickerOpen, setIsColorPickerOpen] = useState(false);
-  const [colorPickerTarget, setColorPickerTarget] = useState<{ fromColor: string; triggerRef: React.RefObject<HTMLElement | null> | null }>({ fromColor: '', triggerRef: null });
+  const [colorPickerTarget, setColorPickerTarget] = useState<{ 
+    fromColor: string; 
+    mode?: 'from' | 'to' | 'palette';
+    paletteIndex?: number;
+    triggerRef: React.RefObject<HTMLElement | null> | null 
+  }>({ fromColor: '', triggerRef: null });
+  
+  // State for palette management dialogs
+  const [showManagePalettes, setShowManagePalettes] = useState(false);
+  const [showImportPalette, setShowImportPalette] = useState(false);
+  const [showExportPalette, setShowExportPalette] = useState(false);
 
   // Hex input states for direct editing
   const [hexInputs, setHexInputs] = useState<Record<string, string>>({});
@@ -306,105 +353,128 @@ export function RemapColorsEffectPanel() {
         </Button>
       </div>
 
-      {/* Color Mappings */}
-      <div className="space-y-3">
-        <div className="flex items-center justify-between">
-          <Label className="text-xs font-medium">
-            Color Mappings ({mappingCount})
-          </Label>
-          <Button
-            onClick={handleResetAllMappings}
-            variant="ghost"
-            size="sm"
-            className="h-6 px-2 text-xs gap-1"
-            title="Reset all mappings to original colors"
-            disabled={hasIdenticalMappings || isAnalyzing}
-          >
-            <RotateCcw className="w-3 h-3" />
-            Reset All
-          </Button>
-        </div>
-        
-        {isAnalyzing ? (
-          <div className="p-4 border border-dashed border-muted-foreground/50 rounded text-center text-xs text-muted-foreground">
-            Analyzing canvas colors...
+      {/* Color Mappings with Palette Support */}
+      <Tabs 
+        value={remapColorsSettings.paletteMode} 
+        onValueChange={(value) => {
+          updateRemapColorsSettings({ paletteMode: value as 'manual' | 'palette' });
+          // Update preview when switching modes
+          updatePreview();
+        }}
+        className="w-full"
+      >
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="manual">Manual</TabsTrigger>
+          <TabsTrigger value="palette">Use Palette</TabsTrigger>
+        </TabsList>
+
+        {/* Manual Tab - existing color mapping UI */}
+        <TabsContent value="manual" className="space-y-3 mt-4">
+          <div className="flex items-center justify-between">
+            <Label className="text-xs font-medium">
+              Color Mappings ({mappingCount})
+            </Label>
+            <Button
+              onClick={handleResetAllMappings}
+              variant="ghost"
+              size="sm"
+              className="h-6 px-2 text-xs gap-1"
+              title="Reset all mappings to original colors"
+              disabled={hasIdenticalMappings || isAnalyzing}
+            >
+              <RotateCcw className="w-3 h-3" />
+              Reset All
+            </Button>
           </div>
-        ) : mappingCount === 0 ? (
-          <div className="p-4 border border-dashed border-muted-foreground/50 rounded text-center text-xs text-muted-foreground">
-            No colors found in canvas. Add some colors to see mapping options.
-          </div>
-        ) : (
-          <div className="space-y-1">
-            {/* Header row */}
-            <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 text-xs font-medium text-muted-foreground pb-2">
-              <div>From Color</div>
-              <div></div>
-              <div>To Color</div>
-              <div></div>
+          
+          {isAnalyzing ? (
+            <div className="p-4 border border-dashed border-muted-foreground/50 rounded text-center text-xs text-muted-foreground">
+              Analyzing canvas colors...
             </div>
-            
-            {/* Color mapping rows */}
-            {sortedColorMappings.map(({ fromColor, toColor }) => {
-              const colorPickerButtonRef = colorPickerButtonRefs[fromColor];
-              const currentHexInput = hexInputs[fromColor] || toColor;
+          ) : mappingCount === 0 ? (
+            <div className="p-4 border border-dashed border-muted-foreground/50 rounded text-center text-xs text-muted-foreground">
+              No colors found in canvas. Add some colors to see mapping options.
+            </div>
+          ) : (
+            <div className="space-y-1">
+              {/* Header row */}
+              <div className="grid grid-cols-[1fr_auto_1fr_auto] gap-2 text-xs font-medium text-muted-foreground pb-2">
+                <div>From Color</div>
+                <div></div>
+                <div>To Color</div>
+                <div></div>
+              </div>
               
-              return (
-                <div key={fromColor} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto] gap-0.5 items-center text-xs p-2 bg-background rounded border border-muted/30 hover:bg-muted/50 hover:border-muted/50 transition-colors">
-                  {/* From Color Swatch */}
-                  <button
-                    className="w-6 h-6 rounded border border-muted/30 flex-shrink-0"
-                    style={{ backgroundColor: fromColor }}
-                    title={fromColor}
-                    disabled
-                  />
-                  
-                  {/* From Color Hex */}
-                  <span className="font-mono text-[10px] text-muted-foreground truncate px-1">
-                    {fromColor}
-                  </span>
-                  
-                  {/* Arrow */}
-                  <div className="flex justify-center px-1">
-                    <MoveRight className="w-3 h-3 text-muted-foreground" />
+              {/* Color mapping rows */}
+              {sortedColorMappings.map(({ fromColor, toColor }) => {
+                const colorPickerButtonRef = colorPickerButtonRefs[fromColor];
+                const currentHexInput = hexInputs[fromColor] || toColor;
+                
+                return (
+                  <div key={fromColor} className="grid grid-cols-[auto_minmax(0,1fr)_auto_auto_minmax(0,1fr)_auto] gap-0.5 items-center text-xs p-2 bg-background rounded border border-muted/30 hover:bg-muted/50 hover:border-muted/50 transition-colors">
+                    {/* From Color Swatch */}
+                    <button
+                      className="w-6 h-6 rounded border border-muted/30 flex-shrink-0"
+                      style={{ backgroundColor: fromColor }}
+                      title={fromColor}
+                      disabled
+                    />
+                    
+                    {/* From Color Hex */}
+                    <span className="font-mono text-[10px] text-muted-foreground truncate px-1">
+                      {fromColor}
+                    </span>
+                    
+                    {/* Arrow */}
+                    <div className="flex justify-center px-1">
+                      <MoveRight className="w-3 h-3 text-muted-foreground" />
+                    </div>
+                    
+                    {/* To Color Swatch */}
+                    <button
+                      ref={colorPickerButtonRef}
+                      onClick={() => handleOpenColorPicker(fromColor, toColor, colorPickerButtonRef)}
+                      className="w-6 h-6 rounded border border-muted/30 flex-shrink-0 hover:border-muted/60 transition-colors cursor-pointer"
+                      style={{ backgroundColor: toColor }}
+                      title="Click to open color picker"
+                    />
+                    
+                    {/* To Color Hex Input */}
+                    <Input
+                      type="text"
+                      value={currentHexInput}
+                      onChange={(e) => handleHexInputChange(fromColor, e.target.value)}
+                      className="flex-1 h-6 text-[9px] font-mono min-w-0 mx-1 px-1"
+                      placeholder="#ffffff"
+                    />
+                    
+                    {/* Individual Reset Button */}
+                    <div className="flex justify-center pl-1">
+                      <Button
+                        onClick={() => handleResetIndividualMapping(fromColor)}
+                        variant="ghost"
+                        size="sm"
+                        className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
+                        title="Reset this color mapping"
+                        disabled={fromColor === toColor}
+                      >
+                        <RotateCcwSquare className="w-3 h-3" />
+                      </Button>
+                    </div>
                   </div>
-                  
-                  {/* To Color Swatch */}
-                  <button
-                    ref={colorPickerButtonRef}
-                    onClick={() => handleOpenColorPicker(fromColor, toColor, colorPickerButtonRef)}
-                    className="w-6 h-6 rounded border border-muted/30 flex-shrink-0 hover:border-muted/60 transition-colors cursor-pointer"
-                    style={{ backgroundColor: toColor }}
-                    title="Click to open color picker"
-                  />
-                  
-                  {/* To Color Hex Input */}
-                  <Input
-                    type="text"
-                    value={currentHexInput}
-                    onChange={(e) => handleHexInputChange(fromColor, e.target.value)}
-                    className="flex-1 h-6 text-[9px] font-mono min-w-0 mx-1 px-1"
-                    placeholder="#ffffff"
-                  />
-                  
-                  {/* Individual Reset Button */}
-                  <div className="flex justify-center pl-1">
-                    <Button
-                      onClick={() => handleResetIndividualMapping(fromColor)}
-                      variant="ghost"
-                      size="sm"
-                      className="h-5 w-5 p-0 text-muted-foreground hover:text-foreground"
-                      title="Reset this color mapping"
-                      disabled={fromColor === toColor}
-                    >
-                      <RotateCcwSquare className="w-3 h-3" />
-                    </Button>
-                  </div>
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Use Palette Tab - NEW */}
+        <TabsContent value="palette" className="space-y-4 mt-4">
+          <div className="text-xs text-muted-foreground p-3 border border-dashed rounded">
+            Palette-based color remapping coming soon...
           </div>
-        )}
-      </div>
+        </TabsContent>
+      </Tabs>
       
       {/* Color Picker Overlay */}
       <ColorPickerOverlay
