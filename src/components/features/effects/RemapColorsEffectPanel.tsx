@@ -11,7 +11,7 @@ import { Label } from '../../ui/label';
 import { Input } from '../../ui/input';
 import { Card, CardContent } from '../../ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../ui/tabs';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../ui/select';
+import { Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger, SelectValue } from '../../ui/select';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '../../ui/tooltip';
 import { useEffectsStore } from '../../../stores/effectsStore';
 import { useCanvasStore } from '../../../stores/canvasStore';
@@ -32,8 +32,8 @@ import {
   Settings,
   Upload,
   Download,
-  AlertCircle,
-  Edit
+  Edit,
+  X
 } from 'lucide-react';
 import { ManagePalettesDialog } from '../ManagePalettesDialog';
 import { ImportPaletteDialog } from '../ImportPaletteDialog';
@@ -110,13 +110,17 @@ export function RemapColorsEffectPanel() {
   
   // Palette store hooks
   const {
-    getAllPalettes,
+    palettes,
+    customPalettes,
     createCustomCopy,
     updateColor,
     addColor,
     removeColor,
-    reorderColors,
-    reversePalette
+    moveColorLeft,
+    moveColorRight,
+    reversePalette,
+    selectedColorId,
+    setSelectedColor
   } = usePaletteStore();
 
   const isCurrentlyPreviewing = isPreviewActive && previewEffect === 'remap-colors';
@@ -134,6 +138,10 @@ export function RemapColorsEffectPanel() {
   const [showManagePalettes, setShowManagePalettes] = useState(false);
   const [showImportPalette, setShowImportPalette] = useState(false);
   const [showExportPalette, setShowExportPalette] = useState(false);
+  
+  // Drag and drop state for palette editor
+  const [draggedColorId, setDraggedColorId] = useState<string | null>(null);
+  const [dropIndicatorIndex, setDropIndicatorIndex] = useState<number | null>(null);
 
   // Hex input states for direct editing
   const [hexInputs, setHexInputs] = useState<Record<string, string>>({});
@@ -211,6 +219,14 @@ export function RemapColorsEffectPanel() {
     setHexInputs(newHexInputs);
   }, [remapColorsSettings.colorMappings]);
   
+  // Get selected palette and its colors (memo to track changes)
+  const selectedPaletteColors = useMemo(() => {
+    if (!remapColorsSettings.selectedPaletteId) return null;
+    const allPalettes = [...palettes, ...customPalettes];
+    const palette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    return palette ? palette.colors.map(c => c.value).join(',') : null;
+  }, [remapColorsSettings.selectedPaletteId, palettes, customPalettes]);
+  
   // Compute palette-based mappings when in palette mode
   useEffect(() => {
     // Only compute if we're in palette mode, have a palette selected, and have canvas colors
@@ -220,7 +236,8 @@ export function RemapColorsEffectPanel() {
       allCanvasColors.length > 0 &&
       !isAnalyzing
     ) {
-      const selectedPalette = getAllPalettes().find(p => p.id === remapColorsSettings.selectedPaletteId);
+      const allPalettes = [...palettes, ...customPalettes];
+      const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
       if (selectedPalette && selectedPalette.colors.length > 0) {
         // Extract palette colors as hex strings
         const paletteColors = selectedPalette.colors.map(c => c.value);
@@ -244,8 +261,10 @@ export function RemapColorsEffectPanel() {
     remapColorsSettings.mappingAlgorithm,
     allCanvasColors,
     isAnalyzing,
-    getAllPalettes,
-    updateRemapColorsSettings
+    palettes,
+    customPalettes,
+    updateRemapColorsSettings,
+    selectedPaletteColors  // Watch for palette color changes
   ]);
 
   // Update preview when settings change
@@ -311,7 +330,8 @@ export function RemapColorsEffectPanel() {
   const handleColorPickerSelect = useCallback((newColor: string) => {
     // Handle palette color editing
     if (colorPickerTarget.mode === 'palette' && colorPickerTarget.paletteIndex !== undefined) {
-      const selectedPalette = getAllPalettes().find(p => p.id === remapColorsSettings.selectedPaletteId);
+      const allPalettes = [...palettes, ...customPalettes];
+      const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
       if (selectedPalette && !selectedPalette.isPreset) {
         const colorToUpdate = selectedPalette.colors[colorPickerTarget.paletteIndex];
         if (colorToUpdate) {
@@ -327,7 +347,7 @@ export function RemapColorsEffectPanel() {
       setHexInputs(prev => ({ ...prev, [colorPickerTarget.fromColor]: newColor }));
     }
     setIsColorPickerOpen(false);
-  }, [colorPickerTarget, handleColorMappingChange, getAllPalettes, remapColorsSettings.selectedPaletteId, updateColor, updatePreview]);
+  }, [colorPickerTarget, handleColorMappingChange, palettes, customPalettes, remapColorsSettings.selectedPaletteId, updateColor, updatePreview]);
 
   // Handle hex input change with sanitization
   const handleHexInputChange = useCallback((fromColor: string, value: string) => {
@@ -358,6 +378,226 @@ export function RemapColorsEffectPanel() {
     handleColorMappingChange(fromColor, fromColor);
     setHexInputs(prev => ({ ...prev, [fromColor]: fromColor }));
   }, [handleColorMappingChange]);
+
+  // Drag and drop handlers for palette editor
+  const handleDragStart = (e: React.DragEvent, colorId: string) => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) {
+      e.preventDefault();
+      return;
+    }
+    setDraggedColorId(colorId);
+    e.dataTransfer.effectAllowed = 'move';
+  };
+
+  const handleDragOver = (e: React.DragEvent, targetColorId?: string) => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette || !draggedColorId) return;
+    e.preventDefault();
+    e.dataTransfer.dropEffect = 'move';
+    
+    if (targetColorId) {
+      const targetIndex = selectedPalette.colors.findIndex(c => c.id === targetColorId);
+      if (targetIndex !== -1) {
+        const rect = (e.target as HTMLElement).getBoundingClientRect();
+        const mouseX = e.clientX - rect.left;
+        const isAfter = mouseX > rect.width / 2;
+        setDropIndicatorIndex(isAfter ? targetIndex + 1 : targetIndex);
+      }
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent, targetColorId: string) => {
+    e.preventDefault();
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette || !draggedColorId || draggedColorId === targetColorId) {
+      setDraggedColorId(null);
+      setDropIndicatorIndex(null);
+      return;
+    }
+
+    const sourceIndex = selectedPalette.colors.findIndex(c => c.id === draggedColorId);
+    const targetIndex = selectedPalette.colors.findIndex(c => c.id === targetColorId);
+    
+    if (sourceIndex === -1 || targetIndex === -1) {
+      setDraggedColorId(null);
+      setDropIndicatorIndex(null);
+      return;
+    }
+
+    let paletteId = selectedPalette.id;
+    if (selectedPalette.isPreset) {
+      const newPaletteId = createCustomCopy(selectedPalette.id);
+      if (newPaletteId) {
+        paletteId = newPaletteId;
+        updateRemapColorsSettings({ selectedPaletteId: newPaletteId });
+      } else {
+        setDraggedColorId(null);
+        setDropIndicatorIndex(null);
+        return;
+      }
+    }
+
+    let finalTargetIndex = targetIndex;
+    if (dropIndicatorIndex === targetIndex + 1) {
+      finalTargetIndex = targetIndex + 1;
+    }
+
+    const currentIndex = sourceIndex;
+    if (currentIndex < finalTargetIndex) {
+      for (let i = 0; i < finalTargetIndex - sourceIndex; i++) {
+        moveColorRight(paletteId, draggedColorId);
+      }
+    } else if (currentIndex > finalTargetIndex) {
+      for (let i = 0; i < sourceIndex - finalTargetIndex; i++) {
+        moveColorLeft(paletteId, draggedColorId);
+      }
+    }
+
+    setDraggedColorId(null);
+    setDropIndicatorIndex(null);
+    updatePreview();
+  };
+
+  const handleDragLeave = (e: React.DragEvent) => {
+    if (!e.currentTarget.contains(e.relatedTarget as Node)) {
+      setDropIndicatorIndex(null);
+    }
+  };
+
+  // Palette color editing handlers
+  const handleColorDoubleClick = (color: string) => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) return;
+    
+    // If it's a preset palette, create a custom copy first
+    if (selectedPalette.isPreset) {
+      const newPaletteId = createCustomCopy(selectedPalette.id);
+      if (newPaletteId) {
+        // Switch to the new custom palette
+        updateRemapColorsSettings({ selectedPaletteId: newPaletteId });
+        // Get fresh state after createCustomCopy
+        const freshCustomPalettes = usePaletteStore.getState().customPalettes;
+        const newPalette = freshCustomPalettes.find(p => p.id === newPaletteId);
+        if (newPalette) {
+          const colorObj = newPalette.colors.find(c => c.value === color);
+          if (colorObj) {
+            const colorIndex = newPalette.colors.findIndex(c => c.id === colorObj.id);
+            setColorPickerTarget({
+              fromColor: color,
+              mode: 'palette',
+              paletteIndex: colorIndex,
+              triggerRef: null
+            });
+            setIsColorPickerOpen(true);
+          }
+        }
+      }
+      return;
+    }
+    
+    // For custom palettes, edit directly
+    const colorObj = selectedPalette.colors.find(c => c.value === color);
+    if (colorObj) {
+      const colorIndex = selectedPalette.colors.findIndex(c => c.id === colorObj.id);
+      setColorPickerTarget({
+        fromColor: color,
+        mode: 'palette',
+        paletteIndex: colorIndex,
+        triggerRef: null
+      });
+      setIsColorPickerOpen(true);
+    }
+  };
+
+  const handleAddColor = () => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) return;
+    addColor(selectedPalette.id, '#000000');
+    updatePreview();
+  };
+
+  const handleEditColor = () => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedColorId || !selectedPalette) return;
+    
+    const colorObj = selectedPalette.colors.find(c => c.id === selectedColorId);
+    if (!colorObj) return;
+    
+    // If it's a preset palette, create a custom copy first
+    if (selectedPalette.isPreset) {
+      const newPaletteId = createCustomCopy(selectedPalette.id);
+      if (newPaletteId) {
+        // Switch to the new custom palette
+        updateRemapColorsSettings({ selectedPaletteId: newPaletteId });
+        // Get fresh state after createCustomCopy
+        const freshCustomPalettes = usePaletteStore.getState().customPalettes;
+        const newPalette = freshCustomPalettes.find(p => p.id === newPaletteId);
+        if (newPalette) {
+          const newColorObj = newPalette.colors.find(c => c.value === colorObj.value);
+          if (newColorObj) {
+            const colorIndex = newPalette.colors.findIndex(c => c.id === newColorObj.id);
+            setColorPickerTarget({
+              fromColor: newColorObj.value,
+              mode: 'palette',
+              paletteIndex: colorIndex,
+              triggerRef: null
+            });
+            setIsColorPickerOpen(true);
+          }
+        }
+      }
+      return;
+    }
+    
+    // For custom palettes, edit directly
+    const colorIndex = selectedPalette.colors.findIndex(c => c.id === selectedColorId);
+    setColorPickerTarget({
+      fromColor: colorObj.value,
+      mode: 'palette',
+      paletteIndex: colorIndex,
+      triggerRef: null
+    });
+    setIsColorPickerOpen(true);
+  };
+
+  const handleRemoveColor = (colorId: string) => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) return;
+    removeColor(selectedPalette.id, colorId);
+    updatePreview();
+  };
+
+  const handleMoveColorLeft = (colorId: string) => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) return;
+    moveColorLeft(selectedPalette.id, colorId);
+    updatePreview();
+  };
+
+  const handleMoveColorRight = (colorId: string) => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) return;
+    moveColorRight(selectedPalette.id, colorId);
+    updatePreview();
+  };
+
+  const handleReversePalette = () => {
+    const allPalettes = [...palettes, ...customPalettes];
+    const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+    if (!selectedPalette) return;
+    reversePalette(selectedPalette.id);
+    updatePreview();
+  };
 
   // Get sorted color mappings
   const sortedColorMappings = useMemo(() => {
@@ -576,28 +816,288 @@ export function RemapColorsEffectPanel() {
                 <SelectValue placeholder="Select palette..." />
               </SelectTrigger>
               <SelectContent>
-                {/* All palettes */}
-                {getAllPalettes().length === 0 ? (
-                  <div className="px-2 py-1.5 text-xs text-muted-foreground">
-                    No palettes available
+                {/* Custom Palettes */}
+                {customPalettes.length > 0 && (
+                  <div>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b border-border/30">
+                      Custom
+                    </div>
+                    {customPalettes.map((palette) => (
+                      <SelectItem key={palette.id} value={palette.id} className="text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="truncate flex-1">{palette.name}</span>
+                          <span className="text-muted-foreground flex-shrink-0">({palette.colors.length} colors)</span>
+                        </div>
+                      </SelectItem>
+                    ))}
                   </div>
-                ) : (
-                  getAllPalettes().map((palette) => (
-                    <SelectItem key={palette.id} value={palette.id} className="text-xs">
-                      <div className="flex items-center gap-2 min-w-0">
-                        <span className="truncate flex-1">{palette.name}</span>
-                        <span className="text-muted-foreground flex-shrink-0">
-                          ({palette.colors.length} colors)
-                        </span>
-                      </div>
-                    </SelectItem>
-                  ))
+                )}
+                    
+                {/* Preset Palettes */}
+                {palettes.filter(p => p.isPreset).length > 0 && (
+                  <div>
+                    <SelectSeparator />
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground border-b border-border/30">
+                      Presets
+                    </div>
+                    {palettes.filter(p => p.isPreset).map((palette) => (
+                      <SelectItem key={palette.id} value={palette.id} className="text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span className="truncate flex-1">{palette.name}</span>
+                          <span className="text-muted-foreground flex-shrink-0">({palette.colors.length} colors)</span>
+                        </div>
+                      </SelectItem>
+                    ))}
+                  </div>
                 )}
               </SelectContent>
             </Select>
           </div>
 
-          {/* Mapping Algorithm Selection */}
+          {/* Color Palette Editor */}
+          {remapColorsSettings.selectedPaletteId && (() => {
+            const allPalettes = [...palettes, ...customPalettes];
+            const selectedPalette = allPalettes.find(p => p.id === remapColorsSettings.selectedPaletteId);
+            if (!selectedPalette) return null;
+            
+            return (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label className="text-xs font-medium">Colors</Label>
+                  <div className="flex gap-0.5">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setShowImportPalette(true)}
+                          >
+                            <Upload className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Import palette</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            className="h-6 w-6 p-0"
+                            onClick={() => setShowExportPalette(true)}
+                          >
+                            <Download className="h-3 w-3" />
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Export palette</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                </div>
+                
+                {/* Color swatches grid */}
+                <Card className="bg-card/50 border-border/50">
+                  <CardContent className="p-2">
+                    <TooltipProvider>
+                      <div className="grid grid-cols-8 gap-0.5 mb-2" onDragLeave={handleDragLeave}>
+                        {selectedPalette.colors.map((color, index) => (
+                        <div key={color.id} className="relative flex items-center justify-center">
+                          {/* Drop indicator line */}
+                          {dropIndicatorIndex === index && (
+                            <div className="absolute -left-0.5 top-0 bottom-0 w-0.5 bg-primary z-10 rounded-full"></div>
+                          )}
+                          
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <div className="relative">
+                              <div
+                                className={`w-6 h-6 rounded border-2 transition-all hover:scale-105 cursor-pointer ${
+                                  draggedColorId === color.id ? 'opacity-50 scale-95' : ''
+                                } ${
+                                  selectedColorId === color.id
+                                    ? 'border-primary ring-2 ring-primary/20 shadow-lg'
+                                    : 'border-border hover:border-border/80'
+                                } cursor-move`}
+                                style={{ backgroundColor: color.value }}
+                                draggable={!selectedPalette.isPreset}
+                                onClick={() => setSelectedColor(color.id)}
+                                onDoubleClick={() => handleColorDoubleClick(color.value)}
+                                onDragStart={(e) => handleDragStart(e, color.id)}
+                                onDragOver={(e) => handleDragOver(e, color.id)}
+                                onDrop={(e) => handleDrop(e, color.id)}
+                              />
+                              
+                              {/* Remove button - appears on hover */}
+                              {!selectedPalette.isPreset && selectedPalette.colors.length > 1 && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleRemoveColor(color.id);
+                                  }}
+                                  className="absolute -top-1 -right-1 h-3 w-3 p-0 bg-destructive text-destructive-foreground hover:bg-destructive/80 rounded-full opacity-0 hover:opacity-100 transition-opacity"
+                                >
+                                  <X className="w-2 h-2" />
+                                </Button>
+                              )}
+                              </div>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                {color.name || 'Unnamed'}: {color.value}
+                                {selectedPalette.isPreset 
+                                  ? ' (double-click to edit)' 
+                                  : ' (drag to reorder, double-click to edit)'}
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                          
+                          {/* Drop indicator line after last item */}
+                          {dropIndicatorIndex === index + 1 && (
+                            <div className="absolute -right-0.5 top-0 bottom-0 w-0.5 bg-primary z-10 rounded-full"></div>
+                          )}
+                        </div>
+                        ))}
+                      </div>
+                    </TooltipProvider>
+                    
+                    {/* Palette controls */}
+                    <div className="flex items-center justify-between">
+                      {/* Editing controls */}
+                      <div className="flex gap-0.5">
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 w-6 p-0"
+                                onClick={() => selectedColorId && handleMoveColorLeft(selectedColorId)}
+                                disabled={!selectedColorId}
+                              >
+                                <ChevronLeft className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move color left</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 w-6 p-0"
+                                onClick={() => selectedColorId && handleMoveColorRight(selectedColorId)}
+                                disabled={!selectedColorId}
+                              >
+                                <ChevronRight className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Move color right</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 w-6 p-0"
+                                onClick={handleAddColor}
+                              >
+                                <Plus className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Add color</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 w-6 p-0"
+                                onClick={handleEditColor}
+                                disabled={!selectedColorId}
+                              >
+                                <Edit className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Edit color</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 w-6 p-0"
+                                onClick={() => selectedColorId && handleRemoveColor(selectedColorId)}
+                                disabled={!selectedColorId || selectedPalette.colors.length <= 1}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Remove color</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+
+                      </div>
+                      
+                      {/* Reverse button (right-aligned) */}
+                      <div>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-6 w-6 p-0"
+                                onClick={handleReversePalette}
+                              >
+                                <ArrowUpDown className="h-3 w-3" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Reverse palette</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+            );
+          })()}
+
+          {/* Mapping Algorithm Selection - AFTER palette editor */}
           {remapColorsSettings.selectedPaletteId && (
             <div className="space-y-2">
               <Label className="text-xs font-medium">Mapping Mode</Label>
@@ -632,246 +1132,6 @@ export function RemapColorsEffectPanel() {
               </Select>
             </div>
           )}
-
-          {/* Palette Editor - show selected palette colors with full editing */}
-          {remapColorsSettings.selectedPaletteId && (() => {
-            const selectedPalette = getAllPalettes().find(p => p.id === remapColorsSettings.selectedPaletteId);
-            if (!selectedPalette) return null;
-            
-            return (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between">
-                  <Label className="text-xs font-medium">
-                    Palette Colors ({selectedPalette.colors.length})
-                  </Label>
-                  <div className="flex gap-0.5">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-6 w-6 p-0"
-                            onClick={() => {
-                              if (selectedPalette.isPreset) {
-                                const newPaletteId = createCustomCopy(selectedPalette.id);
-                                if (newPaletteId) {
-                                  updateRemapColorsSettings({ selectedPaletteId: newPaletteId });
-                                  updatePreview();
-                                }
-                              }
-                            }}
-                            disabled={!selectedPalette.isPreset}
-                            title={selectedPalette.isPreset ? "Create custom copy to edit" : "Already editable"}
-                          >
-                            <Edit className="h-3 w-3" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>{selectedPalette.isPreset ? "Create editable copy" : "Already custom"}</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                    
-                    {!selectedPalette.isPreset && (
-                      <>
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 w-6 p-0"
-                                onClick={() => {
-                                  reversePalette(selectedPalette.id);
-                                  updatePreview();
-                                }}
-                              >
-                                <ArrowUpDown className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Reverse palette order</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                        
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 w-6 p-0"
-                                onClick={() => setShowImportPalette(true)}
-                              >
-                                <Upload className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Import palette</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-6 w-6 p-0"
-                                onClick={() => setShowExportPalette(true)}
-                              >
-                                <Download className="h-3 w-3" />
-                              </Button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Export palette</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      </>
-                    )}
-                  </div>
-                </div>
-                
-                {/* Color swatches grid */}
-                <Card className="bg-card/50 border-border/50">
-                  <CardContent className="p-3">
-                    <div className="grid grid-cols-8 gap-1">
-                      {selectedPalette.colors.map((color, index) => (
-                        <TooltipProvider key={color.id}>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <div className="relative group">
-                                <button
-                                  className="w-full aspect-square rounded border-2 border-border hover:border-border/80 transition-all hover:scale-105 cursor-pointer"
-                                  style={{ backgroundColor: color.value }}
-                                  onClick={() => {
-                                    if (!selectedPalette.isPreset) {
-                                      setColorPickerTarget({
-                                        fromColor: color.value,
-                                        mode: 'palette',
-                                        paletteIndex: index,
-                                        triggerRef: null
-                                      });
-                                      setIsColorPickerOpen(true);
-                                    }
-                                  }}
-                                  title={selectedPalette.isPreset ? "Create custom copy to edit" : "Click to edit color"}
-                                />
-                                
-                                {/* Add/Remove buttons for custom palettes */}
-                                {!selectedPalette.isPreset && (
-                                  <div className="absolute -top-1 -right-1 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    {selectedPalette.colors.length > 1 && (
-                                      <Button
-                                        size="sm"
-                                        variant="ghost"
-                                        className="h-3 w-3 p-0 bg-destructive text-destructive-foreground hover:bg-destructive/80 rounded-full"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          removeColor(selectedPalette.id, color.id);
-                                          updatePreview();
-                                        }}
-                                      >
-                                        <Trash2 className="w-2 h-2" />
-                                      </Button>
-                                    )}
-                                  </div>
-                                )}
-                                
-                                {/* Reorder buttons for custom palettes */}
-                                {!selectedPalette.isPreset && (
-                                  <div className="absolute -bottom-1 left-1/2 -translate-x-1/2 flex gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-3 w-3 p-0 bg-background/90 hover:bg-background rounded-full"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const currentIndex = selectedPalette.colors.findIndex(c => c.id === color.id);
-                                        if (currentIndex > 0) {
-                                          reorderColors(selectedPalette.id, currentIndex, currentIndex - 1);
-                                          updatePreview();
-                                        }
-                                      }}
-                                      disabled={index === 0}
-                                      title="Move left"
-                                    >
-                                      <ChevronLeft className="w-2 h-2" />
-                                    </Button>
-                                    <Button
-                                      size="sm"
-                                      variant="ghost"
-                                      className="h-3 w-3 p-0 bg-background/90 hover:bg-background rounded-full"
-                                      onClick={(e) => {
-                                        e.stopPropagation();
-                                        const currentIndex = selectedPalette.colors.findIndex(c => c.id === color.id);
-                                        if (currentIndex < selectedPalette.colors.length - 1) {
-                                          reorderColors(selectedPalette.id, currentIndex, currentIndex + 1);
-                                          updatePreview();
-                                        }
-                                      }}
-                                      disabled={index === selectedPalette.colors.length - 1}
-                                      title="Move right"
-                                    >
-                                      <ChevronRight className="w-2 h-2" />
-                                    </Button>
-                                  </div>
-                                )}
-                              </div>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>{color.name || 'Unnamed'}: {color.value}</p>
-                              {selectedPalette.isPreset && <p className="text-xs text-muted-foreground">(Create copy to edit)</p>}
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      ))}
-                      
-                      {/* Add color button for custom palettes */}
-                      {!selectedPalette.isPreset && (
-                        <TooltipProvider>
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <button
-                                className="w-full aspect-square rounded border-2 border-dashed border-muted-foreground/30 hover:border-muted-foreground/50 transition-colors flex items-center justify-center bg-muted/20 hover:bg-muted/30"
-                                onClick={() => {
-                                  addColor(selectedPalette.id, '#000000');
-                                  updatePreview();
-                                }}
-                              >
-                                <Plus className="w-3 h-3 text-muted-foreground" />
-                              </button>
-                            </TooltipTrigger>
-                            <TooltipContent>
-                              <p>Add color</p>
-                            </TooltipContent>
-                          </Tooltip>
-                        </TooltipProvider>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-                
-                {/* Info about computed mappings */}
-                {!isAnalyzing && mappingCount > 0 && (
-                  <div className="p-2 bg-blue-50 dark:bg-blue-950/30 rounded border border-blue-200 dark:border-blue-800 text-xs text-blue-900 dark:text-blue-100 flex items-start gap-2">
-                    <AlertCircle className="w-3 h-3 mt-0.5 flex-shrink-0" />
-                    <div>
-                      <div className="font-medium">Auto-mapped {mappingCount} canvas colors</div>
-                      <div className="text-[10px] text-blue-700 dark:text-blue-300 mt-0.5">
-                        Using <span className="font-medium">{remapColorsSettings.mappingAlgorithm === 'closest' ? 'Closest Match' : 'By Index'}</span> algorithm. 
-                        Switch to Manual tab to see computed mappings.
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
           
           {/* Empty state when no palette selected */}
           {!remapColorsSettings.selectedPaletteId && (
