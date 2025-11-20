@@ -530,6 +530,26 @@ export function RemapColorsEffectPanel() {
                     <TooltipTrigger asChild>
                       <Button
                         size="sm"
+                        variant="ghost"
+                        className="h-6 px-2 text-xs gap-1"
+                        onClick={handleResetAllMappings}
+                        disabled={!remapColorsSettings.selectedPaletteId && hasIdenticalMappings}
+                        title="Clear palette selection and reset all mappings"
+                      >
+                        <RotateCcw className="w-3 h-3" />
+                        Reset
+                      </Button>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Clear palette and reset mappings</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Button
+                        size="sm"
                         variant="outline"
                         className="h-6 w-6 p-0"
                         onClick={() => setShowManagePalettes(true)}
