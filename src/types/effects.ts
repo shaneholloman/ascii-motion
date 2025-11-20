@@ -51,6 +51,11 @@ export interface RemapColorsEffectSettings {
   // Processing options
   matchExact: boolean;
   includeTransparent: boolean;
+  
+  // Palette-based mapping (NEW)
+  paletteMode: 'manual' | 'palette';           // Active tab/mode
+  selectedPaletteId: string | null;            // Selected palette ID for automatic mapping
+  mappingAlgorithm: 'closest' | 'by-index';    // Algorithm for palette-to-color mapping
 }
 
 export interface RemapCharactersEffectSettings {

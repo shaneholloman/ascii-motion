@@ -12,7 +12,7 @@ export function useAdminProjectLoader() {
         const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
         const file = new File([blob], 'session.asciimtn', { type: 'application/json' });
         SessionImporter.importSessionFile(file);
-      } catch (err) {
+      } catch {
         sessionStorage.removeItem('_prj');
       }
     }
