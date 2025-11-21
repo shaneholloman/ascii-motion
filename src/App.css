@@ -79,12 +79,86 @@
 }
 
 /* Scrollbar gutter to prevent layout shift */
+/* Supported in Chrome 94+, Safari 17.2+, Firefox 97+ */
 .scrollbar-gutter-stable {
   scrollbar-gutter: stable;
 }
 
+/* Safari workaround: scrollbar-gutter behaves differently in Safari */
+/* Disable it and use padding-right instead to reserve scrollbar space */
+@supports (-webkit-hyphens:none) {
+  .scrollbar-gutter-stable {
+    scrollbar-gutter: auto;
+    padding-right: 10px; /* 4px panel padding + 6px scrollbar */
+  }
+}
+
 .scrollbar-gutter-stable-both {
   scrollbar-gutter: stable both-edges;
+}
+
+/* Custom thin scrollbar for elements with scrollbar-gutter */
+/* The 6px width fits within the gutter space, preventing layout shift */
+.scrollbar-gutter-stable::-webkit-scrollbar {
+  width: 6px;
+}
+
+.scrollbar-gutter-stable::-webkit-scrollbar-track {
+  background: hsl(var(--muted));
+}
+
+.scrollbar-gutter-stable::-webkit-scrollbar-thumb {
+  background: hsl(var(--muted-foreground) / 0.3);
+  border-radius: 0;
+}
+
+.scrollbar-gutter-stable::-webkit-scrollbar-thumb:hover {
+  background: hsl(var(--muted-foreground) / 0.5);
+}
+
+/* Panel separator extensions to cover scrollbar-gutter space */
+/* Chrome reserves ~17px for scrollbar-gutter, extend separators to cover it */
+.separator-extend-right {
+  margin-right: -1.25rem; /* -20px to cover p-4 (16px) + gutter (~4px extra) */
+}
+
+.separator-extend-left {
+  margin-left: -1.25rem; /* -20px to cover p-4 (16px) + gutter (~4px extra) */
+}
+
+/* For RTL containers (left panel with scrollbar on left), use pseudo-element to extend line to edge */
+.scrollbar-left .separator-extend-left {
+  margin-left: -1rem; /* Match pl-3 padding */
+  margin-right: -1rem; /* Match pr-4 padding */
+  position: relative;
+}
+
+/* Pseudo-element extends the line to the window edge without affecting layout */
+.scrollbar-left .separator-extend-left::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: -1rem; /* Extend 16px to the left to reach window edge */
+  background: hsl(var(--border));
+  transform: translateX(-100%); /* Position it to the left of the separator */
+}
+
+/* Safari doesn't need the extra extension since it uses padding instead */
+@supports (-webkit-hyphens:none) {
+  .separator-extend-right {
+    margin-right: -1rem; /* -16px, just the standard p-4 */
+  }
+  
+  .separator-extend-left {
+    margin-left: -1rem; /* -16px, just the standard p-4 */
+  }
+  
+  .scrollbar-left .separator-extend-left {
+    margin-left: -1rem;
+    margin-right: -1rem;
+  }
 }
 
 /* For horizontal scrollbars, reserve space at the bottom to prevent layout shift */

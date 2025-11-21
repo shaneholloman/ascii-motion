@@ -157,12 +157,12 @@ export function GeneratorsMappingTab() {
       {/* Character Mapping */}
       <CharacterMappingSection onSettingsChange={handleSettingsChange} />
       
-      <PanelSeparator />
+      <PanelSeparator side="right" />
       
       {/* Text Color Mapping */}
       <TextColorMappingSection onSettingsChange={handleSettingsChange} />
       
-      <PanelSeparator />
+      <PanelSeparator side="right" />
       
       {/* Background Color Mapping */}
       <BackgroundColorMappingSection onSettingsChange={handleSettingsChange} />

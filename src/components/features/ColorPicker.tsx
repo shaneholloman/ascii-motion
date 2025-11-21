@@ -656,19 +656,19 @@ export const ColorPicker: React.FC<ColorPickerProps> = ({ className = '' }) => {
       </Collapsible>
 
       {/* Divider between Color Palette and Effects */}
-      <PanelSeparator />
+      <PanelSeparator side="right" />
 
       {/* Effects Section */}
       <EffectsSection />
 
       {/* Divider between Effects and Generators */}
-      <PanelSeparator />
+      <PanelSeparator side="right" />
 
       {/* Generators Section */}
       <GeneratorsSection />
 
       {/* Divider after Effects/Generators */}
-      <PanelSeparator />
+      <PanelSeparator side="right" />
 
       {/* Color Picker Modal */}
       <ColorPickerOverlay

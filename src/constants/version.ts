@@ -1,12 +1,20 @@
 // Auto-generated version file - DO NOT EDIT MANUALLY
 // This file is updated by scripts/version-bump.js during deployment
 
-export const VERSION = "0.2.46";
-export const BUILD_DATE = "2025-11-20T08:27:22.285Z";
-export const BUILD_HASH = "1acb7b4";
+export const VERSION = "0.2.47";
+export const BUILD_DATE = "2025-11-20T19:58:54.867Z";
+export const BUILD_HASH = "af4a59a";
 
 // Version history with commit messages
 export const VERSION_HISTORY = [
+  {
+    "version": "0.2.47",
+    "date": "2025-11-20T19:58:54.867Z",
+    "commits": [
+      "Patched safari text bug defaulting to monaco",
+      "Updated color remap effect to include map with palette functonality"
+    ]
+  },
   {
     "version": "0.2.46",
     "date": "2025-11-20T08:27:22.285Z",

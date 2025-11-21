@@ -23,13 +23,15 @@ import { Separator } from '@/components/ui/separator';
 interface PanelSeparatorProps {
   className?: string;
   marginX?: '3' | '4'; // Negative margin to match panel padding
+  side?: 'left' | 'right'; // Which panel this separator is in (for scrollbar-gutter extension)
 }
 
-export const PanelSeparator: React.FC<PanelSeparatorProps> = ({ className = '', marginX = '4' }) => {
+export const PanelSeparator: React.FC<PanelSeparatorProps> = ({ className = '', marginX = '4', side }) => {
   const marginClass = marginX === '3' ? '-mx-3' : '-mx-4';
+  const extensionClass = side === 'right' ? 'separator-extend-right' : side === 'left' ? 'separator-extend-left' : '';
   
   return (
-    <div className={`relative ${marginClass} h-px ${className}`}>
+    <div className={`relative ${marginClass} ${extensionClass} h-px ${className}`}>
       <Separator className="absolute inset-0" />
     </div>
   );

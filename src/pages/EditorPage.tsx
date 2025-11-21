@@ -91,11 +91,11 @@ export function EditorPage() {
             <div className="space-y-3">
               <ActiveStyleSection />
               
-              <PanelSeparator />
+              <PanelSeparator side="right" />
               
               <MainCharacterPaletteSection />
               
-              <PanelSeparator />
+              <PanelSeparator side="right" />
               
               {/* Color Picker - now contains its own collapsible sections */}
               <ColorPicker />

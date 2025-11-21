@@ -557,7 +557,7 @@ export function GradientPanel() {
             </CollapsibleContent>
           </Collapsible>
 
-          <PanelSeparator marginX="3" />
+          <PanelSeparator marginX="3" side="right" />
 
           {/* Character Property */}
           {renderPropertyEditor(
@@ -569,7 +569,7 @@ export function GradientPanel() {
             setCharacterOpen
           )}
 
-          <PanelSeparator marginX="3" />
+          <PanelSeparator marginX="3" side="right" />
 
           {/* Text Color Property */}
           {renderPropertyEditor(
@@ -581,7 +581,7 @@ export function GradientPanel() {
             setTextColorOpen
           )}
 
-          <PanelSeparator marginX="3" />
+          <PanelSeparator marginX="3" side="right" />
 
           {/* Background Color Property */}
           {renderPropertyEditor(
@@ -593,7 +593,7 @@ export function GradientPanel() {
             setBackgroundColorOpen
           )}
 
-          <PanelSeparator marginX="3" />
+          <PanelSeparator marginX="3" side="right" />
 
             </div>
           </ScrollArea>

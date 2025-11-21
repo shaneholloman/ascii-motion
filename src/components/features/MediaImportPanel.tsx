@@ -1291,7 +1291,7 @@ export function MediaImportPanel() {
                 </CollapsibleContent>
               </Collapsible>
               
-              <PanelSeparator marginX="3" className="my-4" />
+              <PanelSeparator marginX="3" className="my-4" side="right" />
               
               {/* Position & Size Section */}
               <Collapsible open={positionSectionOpen} onOpenChange={setPositionSectionOpen}>
@@ -1568,29 +1568,29 @@ export function MediaImportPanel() {
               </Collapsible>
 
               {/* Pre-processing Section */}
-              <PanelSeparator marginX="3" />
+              <PanelSeparator marginX="3" side="right" />
               <PreprocessingSection onSettingsChange={() => setLivePreviewEnabled(true)} />
 
               {/* Character Mapping Section */}
-              <PanelSeparator marginX="3" />
+              <PanelSeparator marginX="3" side="right" />
               <CharacterMappingSection onSettingsChange={() => setLivePreviewEnabled(true)} />
 
               {/* Text Color Mapping Section */}
-              <PanelSeparator marginX="3" />
+              <PanelSeparator marginX="3" side="right" />
               <TextColorMappingSection onSettingsChange={() => setLivePreviewEnabled(true)} />
 
               {/* Background Color Mapping Section */}
-              <PanelSeparator marginX="3" />
+              <PanelSeparator marginX="3" side="right" />
               <BackgroundColorMappingSection onSettingsChange={() => setLivePreviewEnabled(true)} />
               
               {/* Transparency Section */}
-              <PanelSeparator marginX="3" />
+              <PanelSeparator marginX="3" side="right" />
               <TransparencySection 
                 onSettingsChange={() => setLivePreviewEnabled(true)} 
                 onEyedropperClick={handleEyedropperClick}
               />
               
-              <PanelSeparator marginX="3" />
+              <PanelSeparator marginX="3" side="right" />
               
               {/* Processing Progress */}
               {isProcessing && (

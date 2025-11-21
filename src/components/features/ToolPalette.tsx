@@ -231,7 +231,7 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
         </Collapsible>
 
         {/* Separator between Tools and Tool Options */}
-        {hasOptions && <PanelSeparator />}
+        {hasOptions && <PanelSeparator side="left" />}
 
         {/* Tool Options */}
         {hasOptions && (
@@ -805,7 +805,7 @@ export const ToolPalette: React.FC<ToolPaletteProps> = ({ className = '' }) => {
         )}
 
         {/* Separator after Tool Options */}
-        {hasOptions && <PanelSeparator />}
+        {hasOptions && <PanelSeparator side="left" />}
       </div>
     </TooltipProvider>
   );
