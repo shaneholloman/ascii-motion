@@ -27,7 +27,8 @@ export const useOnionSkinRenderer = () => {
   // Memoize drawing styles for onion skins
   const drawingStyles = useMemo(() => {
     const scaledFontSize = fontMetrics.fontSize * zoom;
-    const scaledFontString = `${scaledFontSize}px '${fontMetrics.fontFamily}', monospace`;
+    // Font stack already includes fallback, no need for quotes or extra fallback
+    const scaledFontString = `${scaledFontSize}px ${fontMetrics.fontFamily}`;
     
     return {
       font: scaledFontString,

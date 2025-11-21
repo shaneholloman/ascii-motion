@@ -99,9 +99,10 @@ export const pixelToGrid = (
 
 /**
  * Get font CSS string for canvas rendering
+ * Note: Font stack already includes fallback fonts, no additional fallback needed
  */
 export const getFontString = (fontMetrics: FontMetrics): string => {
-  return `${fontMetrics.fontSize}px '${fontMetrics.fontFamily}', monospace`;
+  return `${fontMetrics.fontSize}px ${fontMetrics.fontFamily}`;
 };
 
 /**

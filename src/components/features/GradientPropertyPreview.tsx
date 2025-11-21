@@ -117,7 +117,8 @@ const CharacterPreview: React.FC<{ property: GradientProperty }> = ({ property }
   const { fontMetrics } = useCanvasContext();
   
   // Use the same font string format as the canvas renderer
-  const fontString = `${fontMetrics.fontSize}px '${fontMetrics.fontFamily}', monospace`;
+  // Font stack already includes fallback, no need for quotes or extra fallback
+  const fontString = `${fontMetrics.fontSize}px ${fontMetrics.fontFamily}`;
   
   return (
     <div

@@ -120,7 +120,8 @@ export const renderFrameDirectly = (
   
   // Calculate drawing styles (similar to useCanvasRenderer)
   const scaledFontSize = settings.fontMetrics.fontSize * settings.zoom;
-  const fontString = `${scaledFontSize}px '${settings.fontMetrics.fontFamily}', monospace`;
+  // Font stack already includes fallback, no need for quotes or extra fallback
+  const fontString = `${scaledFontSize}px ${settings.fontMetrics.fontFamily}`;
   const gridLineColor = calculateAdaptiveGridColor(canvasSettings.canvasBackgroundColor, settings.theme as 'light' | 'dark');
   
   const drawingSettings = {
