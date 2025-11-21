@@ -67,8 +67,15 @@ const VimeoEmbed: React.FC<{
     if (!shouldLoadIframe) return;
     
     const handleMessage = (event: MessageEvent) => {
-      // Only accept messages from Vimeo
-      if (!event.origin.includes('vimeo.com')) return;
+      // Only accept messages from trusted Vimeo origins
+      try {
+        const originUrl = new URL(event.origin);
+        const allowedHosts = ['vimeo.com', 'player.vimeo.com'];
+        if (!allowedHosts.includes(originUrl.hostname)) return;
+      } catch {
+        // If URL parsing fails, reject the message
+        return;
+      }
       
       try {
         const data = JSON.parse(event.data);
