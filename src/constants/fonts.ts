@@ -121,6 +121,16 @@ export const MONOSPACE_FONTS: MonospaceFont[] = [
     fileSize: '~28KB'
   },
   {
+    id: 'c64-pro',
+    name: 'C64 Pro',
+    displayName: 'C64 Pro (Commodore)',
+    cssStack: '"C64 Pro", monospace',
+    category: 'web',
+    description: 'Commodore 64 font - proportional variant for different rendering',
+    isBundled: false,
+    fileSize: '~30KB'
+  },
+  {
     id: 'auto',
     name: 'Auto',
     displayName: 'Auto (Best Available)',
