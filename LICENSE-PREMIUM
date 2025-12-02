@@ -9,6 +9,7 @@ proprietary and confidential.
 
 NOTICE: This license applies ONLY to the following directories and files:
   - packages/premium/
+  - packages/web/
   - Any files marked with "@license Proprietary" in the header comments
 
 Unauthorized copying, modification, distribution, or use of these Premium Features
