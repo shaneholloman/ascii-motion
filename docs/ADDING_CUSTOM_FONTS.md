@@ -134,7 +134,24 @@ export function getFontStack(fontId: string): string {
 - Gallery uses direct canvas rendering, so font names with spaces **require quotes**
 - Without quotes, canvas `ctx.font` silently falls back to default
 
-### 5. Preload Fonts (Optional but Recommended)
+### 5. Update Font Detection Quote Stripping
+
+The font detection system (`src/utils/fontDetection.ts`) parses font stacks and strips quotes to compare font names. If you add a font with spaces in the name, the `parseFontStack` function must properly strip quotes so that the detected font name matches the font's `name` property in `fonts.ts`.
+
+**This is already handled**, but if you see false "font not available" warnings for fonts that ARE working, verify that `parseFontStack` includes this line:
+
+```typescript
+// Strip surrounding quotes (single or double) from font names
+.map(font => font.replace(/^["'](.*)["']$/, '$1'))
+```
+
+**Why this matters:**
+- Font stack: `'"C64 Pro", monospace'` → parsed as `"C64 Pro"` (with quotes)
+- Font name in `fonts.ts`: `'C64 Pro'` (without quotes)
+- Without quote stripping, these don't match → false warning shown
+- With quote stripping, `"C64 Pro"` becomes `C64 Pro` → correct match ✅
+
+### 6. Preload Fonts (Optional but Recommended)
 
 Add font preloading for better performance:
 
@@ -153,7 +170,7 @@ Add font preloading for better performance:
 </head>
 ```
 
-### 6. Invalidate SessionStorage Cache
+### 7. Invalidate SessionStorage Cache
 
 When updating font structures, increment the cache version to force fresh data loading:
 
@@ -321,9 +338,10 @@ When adding a new font, test these scenarios:
 
 ```
 ✅ Add font files to /public/fonts/
-✅ Add @font-face to packages/web/src/index.css
-✅ Add font to packages/web/src/constants/fonts.ts (with quotes if needed)
+✅ Add @font-face to src/index.css
+✅ Add font to src/constants/fonts.ts (with quotes if needed)
 ✅ Add font to packages/premium/src/community/utils/fontMapping.ts (exact match)
+✅ Verify parseFontStack strips quotes (already implemented in fontDetection.ts)
 ✅ (Optional) Add preload to index.html
 ✅ (If structure changed) Increment CACHE_VERSION in ProjectDetailPage.tsx
 ✅ Test in editor
