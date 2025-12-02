@@ -98,6 +98,8 @@ function parseFontStack(fontStack: string): string[] {
   return fontStack
     .split(',')
     .map(font => font.trim())
+    // Strip surrounding quotes (single or double) from font names
+    .map(font => font.replace(/^["'](.*)["']$/, '$1'))
     .filter(font => 
       font !== 'monospace' && 
       font !== 'sans-serif' && 
