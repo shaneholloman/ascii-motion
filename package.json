@@ -1,7 +1,7 @@
 {
   "name": "ascii-motion",
   "private": true,
-  "version": "0.2.49",
+  "version": "0.2.51",
   "type": "module",
   "workspaces": [
     "packages/*",
@@ -11,7 +11,7 @@
   "scripts": {
     "dev": "vite",
     "build": "npm run build:packages && tsc -b && vite build",
-    "build:packages": "npm run build -ws --if-present",
+    "build:packages": "npm run build -w @ascii-motion/core -w @ascii-motion/premium",
     "build:core": "npm run build -w @ascii-motion/core",
     "build:premium": "npm run build -w @ascii-motion/premium",
     "dev:packages": "npm run dev -ws --if-present",

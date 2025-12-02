@@ -55,7 +55,17 @@ npm run build
 
 ## 🚀 Deployment
 
-Deployment to Vercel with automated versioning.
+This monorepo contains **three separate deployable apps**, each with its own Vercel project:
+
+| App | Domain | Deploy From | Command |
+|-----|--------|-------------|---------|
+| **Main App** | `ascii-motion.app` | Root | `npm run deploy` |
+| **Marketing** | `ascii-motion.com` | `packages/web/marketing` | `npx vercel --prod` |
+| **Docs** | `docs.ascii-motion.com` | `packages/web/docs-site` | `npx vercel --prod` |
+
+### Main App Deployment (Root)
+
+The main ASCII art editor deploys with automated versioning:
 
 <details>
   <summary>Available Deployment Commands</summary>
@@ -82,6 +92,22 @@ npm run version:major
 ```
 </details>
 
+### Marketing & Docs Site Deployment
+
+These deploy **separately** from the main app using the Vercel CLI:
+
+```bash
+# Marketing site (ascii-motion.com)
+cd packages/web/marketing
+npx vercel --prod
+
+# Docs site (docs.ascii-motion.com)
+cd packages/web/docs-site
+npx vercel --prod
+```
+
+See the README in each package for detailed deployment instructions.
+
 
 ## 🏗️ Tech Stack
 
@@ -95,7 +121,7 @@ npm run version:major
 
 ## 📦 Project Structure
 
-**This is a monorepo with dual licensing:**
+**This is a monorepo with dual licensing and separate deployment targets:**
 
 - **`packages/core/`** - Open source core features (MIT License)
   - Canvas editor, drawing tools, animation system
@@ -107,9 +133,15 @@ npm run version:major
   - Cloud project storage (Supabase)
   - Payment integration (future)
   
-- **`packages/web/`** - Marketing site and documentation (Propietary License)
-  - Public website at ascii-motion.com
-  - docs at docs.ascii-motion.com
+- **`packages/web/marketing/`** - Marketing site (Proprietary License)
+  - Deploys to `ascii-motion.com`
+  - Next.js 16 + React 19
+  - Has its own `package.json` and Vercel project
+  
+- **`packages/web/docs-site/`** - Documentation site (Proprietary License)
+  - Deploys to `docs.ascii-motion.com`
+  - Next.js 15 + MDX
+  - Has its own `package.json` and Vercel project
   
 See [docs/MONOREPO_SETUP_GUIDE.md](docs/MONOREPO_SETUP_GUIDE.md) for details.
 
