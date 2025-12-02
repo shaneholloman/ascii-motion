@@ -11,6 +11,10 @@ https://ascii-motion.app
 See what people are making in the community gallery:
 https://ascii-motion.app/community
 
+Learn more on the landing page:
+https://ascii-motion.com
+
+
 <img width="2610" height="1758" alt="Screenshot of the ASCII Motion app UI" src="https://github.com/user-attachments/assets/e2be1571-c322-4c8f-bdef-10ab01eb9a05" />
 </br>
 
@@ -102,7 +106,11 @@ npm run version:major
   - User authentication (email-based)
   - Cloud project storage (Supabase)
   - Payment integration (future)
-
+  
+- **`packages/web/`** - Marketing site and documentation (Propietary License)
+  - Public website at ascii-motion.com
+  - docs at docs.ascii-motion.com
+  
 See [docs/MONOREPO_SETUP_GUIDE.md](docs/MONOREPO_SETUP_GUIDE.md) for details.
 
 ## 🏛️ Core App Architecture
