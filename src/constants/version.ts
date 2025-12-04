@@ -1,12 +1,19 @@
 // Auto-generated version file - DO NOT EDIT MANUALLY
 // This file is updated by scripts/version-bump.js during deployment
 
-export const VERSION = "0.2.54";
-export const BUILD_DATE = "2025-12-03T22:53:34.986Z";
-export const BUILD_HASH = "029362a";
+export const VERSION = "0.2.55";
+export const BUILD_DATE = "2025-12-03T23:05:35.936Z";
+export const BUILD_HASH = "6e41ad9";
 
 // Version history with commit messages
 export const VERSION_HISTORY = [
+  {
+    "version": "0.2.55",
+    "date": "2025-12-03T23:05:35.936Z",
+    "commits": [
+      "Updated vulnerable react/nextjs packages"
+    ]
+  },
   {
     "version": "0.2.54",
     "date": "2025-12-03T22:53:34.986Z",

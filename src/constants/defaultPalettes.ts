@@ -426,11 +426,41 @@ export const VIBRANT_FIESTA_PALETTE: ColorPalette = {
 };
 
 /**
+ * Commodore 64 Palette
+ * Classic 16-color palette from the iconic Commodore 64 computer
+ */
+export const COMMODORE_64_PALETTE: ColorPalette = {
+  id: 'commodore-64',
+  name: 'Commodore 64',
+  isPreset: true,
+  isCustom: false,
+  colors: createPaletteColors([
+    { hex: '#000000', name: 'Black' },
+    { hex: '#FFFFFF', name: 'White' },
+    { hex: '#68372B', name: 'Red' },
+    { hex: '#70A4B2', name: 'Cyan' },
+    { hex: '#6F3D86', name: 'Purple' },
+    { hex: '#588D43', name: 'Green' },
+    { hex: '#352879', name: 'Blue' },
+    { hex: '#B8C76F', name: 'Yellow' },
+    { hex: '#6F4F25', name: 'Orange' },
+    { hex: '#433900', name: 'Brown' },
+    { hex: '#9A6759', name: 'Light Red' },
+    { hex: '#444444', name: 'Dark Grey' },
+    { hex: '#6C6C6C', name: 'Grey' },
+    { hex: '#9AD284', name: 'Light Green' },
+    { hex: '#6C5EB5', name: 'Light Blue' },
+    { hex: '#959595', name: 'Light Grey' }
+  ])
+};
+
+/**
  * Array of all default palettes (alphabetically sorted)
  */
 export const DEFAULT_PALETTES: ColorPalette[] = [
   ANSI_PALETTE,
   BRIGHT_GREENS_PALETTE,
+  COMMODORE_64_PALETTE,
   COOL_BLUES_PALETTE,
   EARTH_TONES_PALETTE,
   FIERY_SUNSET_PALETTE,
